@@ -84,7 +84,7 @@ which we will use in our operator (??).
 ```haskell
 (??) :: (MonadError e m, Bifurcate a) => m a -> (CErr a -> e) -> m (CRes a)
 action ?? toErr = action >>= collapse toErr
-```haskell
+```
 
 this allows code like:
 
