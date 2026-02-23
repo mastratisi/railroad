@@ -1,0 +1,46 @@
+cabal-version:      3.0
+name:               railroad
+version:            0.1.0.0
+synopsis:
+    A railway oriented mini-DSL for handling and interpreting error states and cardinality checks across diverse failure types in a unified way.
+
+-- description:
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Frederik Kallstrup Mastratisi
+maintainer:         mastratisi@proton.me
+-- copyright:
+category:           Control
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+    build-depends:
+      base ^>=4.20.2.0,
+      validation,
+      effectful
+      
+
+library
+    import:           warnings
+    exposed-modules:  Railroad
+    -- other-modules:
+    -- other-extensions:
+    build-depends:    base ^>=4.20.2.0
+    hs-source-dirs:   src
+    default-language: GHC2021
+    
+
+test-suite railroad-test
+    import:           warnings
+    default-language: GHC2021
+    -- other-modules:
+    -- other-extensions:
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:
+        base ^>=4.20.2.0,
+        railroad

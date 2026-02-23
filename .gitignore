@@ -1,0 +1,63 @@
+### --- Emacs ---
+# Temporary files and lockfiles
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+.dir-locals.el
+# If you use Org-mode
+*.pdm
+# Python/Jupyter bits if using Emacs-IPython
+.ipynb_checkpoints
+
+### --- Git ---
+# Often ignored in submodules
+.git/
+*.orig
+*.rej
+
+### --- direnv ---
+# Ignore the local environment state
+.direnv/
+.envrc.local
+
+### --- Nix ---
+# Result symlinks from nix-build or nix build
+result
+result-*
+# If you use lorri or other nix-shell tools
+.nix-shell
+.ghc.environment.*
+
+### --- Haskell / Cabal / Stack ---
+# Build artifacts
+dist/
+dist-*
+cabal-dev/
+*.o
+*.hi
+*.hie
+*.chi
+*.chs.h
+*.dyn_o
+*.dyn_hi
+
+# Cabal-specific
+.cabal-sandbox/
+cabal.sandbox.config
+cabal.project.local
+cabal.project.local~
+cabal.project.rescan
+.ghc.environment*
+
+# Stack-specific (if you ever use it alongside Cabal)
+.stack-work/
+stack.yaml.lock
+
+### --- OS Specific ---
+.DS_Store
+Thumbs.db
