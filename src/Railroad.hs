@@ -77,7 +77,7 @@ action ? err = action ?? const err
   if predicate val then pure val else throwError_ $ toErr val
 
 -- | Collapses a structure, and recovers to a default value in the error case
-(?~) :: forall es e a. Bifurcate a => Eff es a -> CRes a -> Eff es (CRes a)
+(?~) :: forall es a. Bifurcate a => Eff es a -> CRes a -> Eff es (CRes a)
 action ?~ defaultVal = action >>= either (const (pure defaultVal)) pure . bifurcate
 
 
