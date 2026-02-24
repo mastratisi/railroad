@@ -4,35 +4,79 @@ Check out how terse my Servant http handler is:
 
 ```haskell
 serveUserAPI :: ServerT UserAPI (Eff UserStack)
-serveUserAPI = registerStart :<|> registerComplete :<|> getUserById
+serveUserAPI = registerStart
  where
    registerStart :: EmailAddress -> Eff UserStack Text
    registerStart email = do
      time <- getTime
      runQuery (userByEmail time email) ? err503 ∅? const err409
      makeJWT email (Just time) ? err500
-   registerComplete :: RegisterDTO -> Eff UserStack ()
-   registerComplete RegisterDTO {..} = do
-     email <- verifyJWT jwtToken ? err400
-     ph <- hashPassword password
-     time <- getTime
-     uid <- Id @User <$> genUUID
-     runLockedWrite (registerUser email name ph time uid) ? err500
-   getUserById :: Id User -> Eff UserStack UserDTO
-   getUserById uid = do
-     time <- getTime
-     user <- runQuery (userById time uid) ? err503 ?! cardinalityErr err404 (const err500)
-     pure $ toUserDTO user
 ```
-The underlying idea is that most in-the-wild error handling happens in a
-`MonadError` like context (here an effect stack with the Error effect),
-and is very repetitive: We have some function that returns what we
-care about wrapped in some functor like `Maybe a`. These functor's state
-space is bifurcated into a space representing errors (e.g. `Nothing`)
-and another representing results (e.g. `Just a`). We therefore need to
-unwrap the function's return by case analysis (explicitly or
-implicitly) where in the error case we need to map/interpret the error
-into our `MonadError`'s error and throw it.
+This is how registerStart would be without the operators, using the most common style:
+
+```haskell
+registerStart :: EmailAddress -> Eff UserStack Text
+registerStart email = do
+  time <- getTime
+
+  -- Check if user already exists
+  userMaybe <- runQuery (userByEmail time email)
+  case userMaybe of
+    Left dbErr -> throwError $ err503
+    Right Nothing -> pure ()              -- good – no user found
+    Right (Just _) -> throwError err409   -- conflict – already registered
+
+  -- Create JWT
+  jwtResult <- makeJWT email (Just time)
+  case jwtResult of
+    Left jwtErr -> throwError $ err500
+    Right token -> pure token
+```
+Or alternativly using the `either` and `maybe` catamorphisms:
+```haskell
+registerStart :: EmailAddress -> Eff UserStack Text
+registerStart email = do
+  time <- getTime
+
+  runQuery (userByEmail time email) >>= either
+    (const $ throwError err503)
+    (maybe (pure ()) 
+	       (const $ throwError err409))
+
+  makeJWT email (Just time) >>= either
+    (const $ throwError err500)
+    pure
+```
+
+Compared to the common style the DSL eliminates both noisy controlflow
+and the manual unwrapping of functors.
+
+
+Compared to the catamorphism style it is more concise by making the
+success case and throw implicit and it combines linearly. It also
+eliminates the need to choose catamorphism by abstracting over the
+most common functors. Specifically those that are isomorphic to a
+result+error coproduct in structure and semantics. The major win for
+readability is that there is no need to reason about what branch is
+the succes or error case.
+
+
+The tradeoff is that there are 7 operators in total to familiarize one
+self with for the full DSL, though there is a single main one, the
+rest are for convenience.
+
+
+The underlying idea for the abstraction is that most in-the-wild error
+handling happens in a `MonadError`-like context (here an effect stack
+with the Error effect), and is very repetitive: We have some function
+that returns what we care about wrapped in some functor like `Maybe a`.
+These functor's state space is bifurcated into a space
+representing errors (e.g. `Nothing`) and another representing results
+(e.g. `Just a`). We therefore need to unwrap the function's return by
+case analysis (explicitly or implicitly) where in the error case we
+need to map/interpret the error into our `MonadError`'s error and
+throw it.
+
 
 This can be done very tersely and automatically with a single operator
 `(??)` generalizing nearly every common error functor if we just fix what part
@@ -53,6 +97,7 @@ i.e. the structure of their bifurcated spaces.
 
 To restate more concisely, we need to bifurcate by error/result and
 embed into our outer monad, the one that supports `MonadError`.
+
 
 That all these functors are Either-like (binary coproducts) means that
 the bifurcation can happen by catamorphism into `Either`. Note the
@@ -77,6 +122,7 @@ instance Bifurcate (Either e a) where
 
 `CErr`, `CRes` are type families defined by the table above. So `CErr
 Bool = ()` and `CErr (Either e a) = e`.
+
 
 We can then embed into our monad by what I call our collapse combinator:
 ```haskell
@@ -105,6 +151,7 @@ i.e. no tarpit of repetitive controlflow yet still allowing per
 callsite interpretation with informative messages; the error type of
 the functor is just threaded into the toErr function.
 
+
 I've also added operators like:
 ```haskell
 -- | Collapses a structure using a constant error.
@@ -127,6 +174,7 @@ Let me now explain how I handle the abstraction over traversables of
 their semantics are preserved. Traversables of `Either`
 short circuits on the first error, while traversables of `Validation`
 accumulates the errors.
+
 
 It's also a nice showcase of how easy it is to extend what my Railroad
 module abstracts over. I only need to add two Bifurcate instances: 
@@ -183,7 +231,7 @@ interpretation of what cardinalities are error state:
 
 To support the `(?!)` operator I have created a Maybe-like type, with
 a convenience catamorphism that in normal usage is a catamorphism to
-the error type of the monad `(?!)` is working in
+the error type of the monad `(?!)` is working in.
 
 ```haskell
 data CardinalityError ta = IsEmpty | TooMany !ta
@@ -200,5 +248,5 @@ Using a catamorphism via a binary coproduct algebra we get a nice
 family of error handling operators `(??, ?, ?>, ?~)`.  And using a
 catamorphism via a simple cardinality algebra (0, 1, many) we get
 another nice family of operators for handling result-sets `(?+, ?!,
-?∅)`
+?∅)`.
 
