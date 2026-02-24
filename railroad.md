@@ -1,4 +1,4 @@
-# Terse railroad error handling DSL abstracting over error types by catamorphism to either
+# A Railroad style error handling DSL that abstracts over error functors by catamorphism via Either
 
 Check out how terse my Servant http handler is:
 
@@ -24,7 +24,7 @@ serveUserAPI = registerStart :<|> registerComplete :<|> getUserById
      user <- runQuery (userById time uid) ? err503 ?! cardinalityErr err404 (const err500)
      pure $ toUserDTO user
 ```
-The underlying idea is that most error handling happens in a
+The underlying idea is that most in-the-wild error handling happens in a
 `MonadError` like context (here an effect stack with the Error effect),
 and is very repetitive: We have some function that returns what we
 care about wrapped in some functor like `Maybe a`. These functor's state
@@ -34,12 +34,13 @@ unwrap the function's return by case analysis (explicitly or
 implicitly) where in the error case we need to map/interpret the error
 into our `MonadError`'s error and throw it.
 
-This can be done very tersely with a single operator `(??)` for nearly every
-error functor if we just fix what part of the functor's space counts
-as error and notice that `Bool`, `Maybe`, `Validation`, and traversables of
-those functors, morally are just specializations of `Either`. Their
-notable differences, that we need to abstract over, is the information
-they carry with them, i.e. the structure of their bifurcated spaces.
+This can be done very tersely and automatically with a single operator
+`(??)` generalizing nearly every common error functor if we just fix what part
+of the functor's space counts as error and notice that `Bool`,
+`Maybe`, `Validation`, and traversables of those functors, morally are
+just specializations of `Either`. Their notable differences, that we
+need to abstract over, is the information they carry with them,
+i.e. the structure of their bifurcated spaces.
 
 
 | functor        | Error Constructor | Error Info | Result Info |
@@ -50,36 +51,41 @@ they carry with them, i.e. the structure of their bifurcated spaces.
 | Validation e a | Failure           | e          | a           |
 | [Either e a]   | --                | e          | [a]         |
 
-To restate, we need to bifurcate by error/result and inject into our
-monad that supports `MonadError`.
+To restate more concisely, we need to bifurcate by error/result and
+embed into our outer monad, the one that supports `MonadError`.
 
-That all these functors are Either-like means that the bifurcation can
-happen by catamorphism into `Either`. Note the class, skim the instances:
+That all these functors are Either-like (binary coproducts) means that
+the bifurcation can happen by catamorphism into `Either`. Note the
+class, skim the instances:
+
 ```haskell
 class Bifurcate f where
   bifurcate :: f -> Either (CErr f) (CRes f)
+  
 instance Bifurcate Bool where
-  -- bool   :: b -> b -> Bool -> b
   bifurcate = bool (Left ()) (Right ())
+  -- bool   :: b -> b -> Bool -> b
+  
 instance Bifurcate (Maybe a) where
-  -- maybe  :: b -> (a -> b) -> Maybe a -> b
   bifurcate = maybe (Left ()) Right
+  -- maybe  :: b -> (a -> b) -> Maybe a -> b
+  
 instance Bifurcate (Either e a) where
-  -- either :: (e -> b) -> (a -> b) -> Either e a -> b
   bifurcate = id
+  -- either :: (e -> b) -> (a -> b) -> Either e a -> b
 ```
 
-`CErr`, `CRes` are type families defined by the table above. So 
-`CErr Bool = ()` and `CErr (Either e a) = e`.
+`CErr`, `CRes` are type families defined by the table above. So `CErr
+Bool = ()` and `CErr (Either e a) = e`.
 
-We can then inject into our monad by what I call our collapse combinator:
+We can then embed into our monad by what I call our collapse combinator:
 ```haskell
 collapse :: (MonadError e m, Bifurcate f) => (CErr f -> e) -> f -> m (CRes f)
 collapse toErr = either (throwError . toErr) pure . bifurcate
 ```
 
 It interprets what the error space means with the toErr function, 
-which we will use in our operator (??).
+which will be put to good use in our operator (??).
 
 ```haskell
 (??) :: (MonadError e m, Bifurcate a) => m a -> (CErr a -> e) -> m (CRes a)
@@ -95,10 +101,9 @@ userData <- fetchFromS3 permission path ?? \case ->
     Wrong path -> http404 {body = path ++ " doesn't exist"}
 ```
 
-i.e. no tarpit of repetitive controlflow that can go wrong while still
-allowing per callsite interpretation with informative messages; the
-error type of the functor is just threaded into the toErr function
-given. So for Maybe and Bool it would just be unit.
+i.e. no tarpit of repetitive controlflow yet still allowing per
+callsite interpretation with informative messages; the error type of
+the functor is just threaded into the toErr function.
 
 I've also added operators like:
 ```haskell
@@ -113,23 +118,24 @@ action ? err = action ?? const err
   if predicate val then pure val else throwError_ $ toErr val
 
 -- | Collapses a structure, and recovers to a default value in the error case
-(?~) :: (MonadError e m, Bifurcate a) => m a -> CRes a -> m (CRes a)
+(?~) ::  Bifurcate a => m a -> CRes a -> m (CRes a)
 action ?~ defaultVal = action >>= either (const (pure defaultVal)) pure . bifurcate
 ```
 
-What's left to explain is how I handle the abstraction over
-traversables of `Either` and `Validation`. What is nice about their
-instances is their semantics. Traversables of `Either` short circuts on
-the first error, while traversables of `Validation` accumulates the
-errors.
+Let me now explain how I handle the abstraction over traversables of
+`Either` and `Validation`. What is nice about their instances is that
+their semantics are preserved. Traversables of `Either`
+short circuits on the first error, while traversables of `Validation`
+accumulates the errors.
 
 It's also a nice showcase of how easy it is to extend what my Railroad
 module abstracts over. I only need to add two Bifurcate instances: 
 ```haskell
 instance Traversable t => Bifurcate (t (Either e a)) where 
   bifurcate = sequenceA 
-  -- pedagogically: bifurcate = bifurcate . sequenceA instance
-(Traversable t, Semigroup e) => Bifurcate (t (Validation e a)) where
+  -- pedagogically: bifurcate = bifurcate . sequenceA
+  
+instance (Traversable t, Semigroup e) => Bifurcate (t (Validation e a)) where
   bifurcate = toEither . sequenceA 
   -- pedagogically: bifurcate = bifurcate . sequenceA
 ```
@@ -189,4 +195,10 @@ cardinalityErr onEmpty onTooMany = \case
   TooMany xs -> onTooMany xs
 ```
 
+## Recap
+Using a catamorphism via a binary coproduct algebra we get a nice
+family of error handling operators `(??, ?, ?>, ?~)`.  And using a
+catamorphism via a simple cardinality algebra (0, 1, many) we get
+another nice family of operators for handling result-sets `(?+, ?!,
+?∅)`
 
