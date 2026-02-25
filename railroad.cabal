@@ -39,6 +39,7 @@ test-suite railroad-test
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Main.hs
+    other-modules:    RailroadSpec
     build-depends:
                   base ^>=4.20.2.0,
                   hspec  >= 2.11.14 && < 2.12,
