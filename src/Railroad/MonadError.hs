@@ -32,9 +32,13 @@ action ? err = action ?? const err
   val <- action
   if predicate val then pure val else throwError $ toErr val
 
-(?~) :: forall m a. (Bifurcate a, Monad m)
-     => m a -> CRes a -> m (CRes a)
-action ?~ defaultVal = action >>= either (const (pure defaultVal)) pure . bifurcate
+-- | Collapses a structure and recovers to a value dependent on the error
+(??~) :: forall m a. (Bifurcate a, Monad m) => m a -> (CErr a -> CRes a) -> m (CRes a)
+action ??~ defaultFunc = action >>= either (pure . defaultFunc) pure . bifurcate
+
+-- | Collapses a structure, and recovers to a constant default value in the error case
+(?~) :: forall m a. (Bifurcate a, Monad m) => m a -> CRes a -> m (CRes a)
+action ?~ defaultVal = action ??~ (const defaultVal)
 
 (?+) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> e -> m (t a)

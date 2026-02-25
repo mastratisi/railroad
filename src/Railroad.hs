@@ -48,6 +48,14 @@ instance Bifurcate (Either e a) where
 instance Bifurcate (Validation e a) where
   bifurcate = toEither
   -- validation :: (e -> b) -> (a -> b) -> Validation e a -> b
+
+instance (Traversable t, CErr (t Bool) ~ (), CRes (t Bool) ~ t ())
+    => Bifurcate (t Bool) where
+  bifurcate = bifurcate . sequenceA . fmap bifurcate
+  -- Bool is not Applicative, so we need to map to Either first
+instance (Traversable t, CErr (t (Maybe a)) ~ (), CRes (t (Maybe a)) ~ t a)
+    => Bifurcate (t (Maybe a)) where
+  bifurcate = bifurcate . sequenceA
 instance (Traversable t, CErr (t (Either e a)) ~ e, CRes (t (Either e a)) ~ t a)
     => Bifurcate (t (Either e a)) where
   bifurcate = sequenceA
@@ -76,9 +84,13 @@ action ? err = action ?? const err
   val <- action
   if predicate val then pure val else throwError_ $ toErr val
 
--- | Collapses a structure, and recovers to a default value in the error case
+-- | Collapses a structure and recovers to a value dependent on the error
+(??~) :: forall es a. Bifurcate a => Eff es a -> (CErr a -> CRes a) -> Eff es (CRes a)
+action ??~ defaultFunc = action >>= either (pure . defaultFunc) pure . bifurcate
+
+-- | Collapses a structure, and recovers to a constant default value in the error case
 (?~) :: forall es a. Bifurcate a => Eff es a -> CRes a -> Eff es (CRes a)
-action ?~ defaultVal = action >>= either (const (pure defaultVal)) pure . bifurcate
+action ?~ defaultVal = action ??~ (const defaultVal)
 
 
 -- TODO: Derive instances for it? Functor?
