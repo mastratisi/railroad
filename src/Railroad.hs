@@ -1,23 +1,17 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Railroad where
 
 import           Data.Bool               (bool)
--- import Data.Functor.Identity (Identity)
 import           Data.Foldable           (toList)
 import           Data.Kind               (Type)
 import           Data.Validation         (Validation, toEither)
-import           Effectful
+import           Effectful               (Eff, type (:>))
 import           Effectful.Error.Dynamic (Error, throwError_)
--- import Barbies
--- import Barbies.Bare
 
 
 type family CErr f :: Type where
