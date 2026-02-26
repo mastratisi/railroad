@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               railroad
-version:            0.1.0.0
+version:            0.1.0.1
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Frederik Kallstrup Mastratisi
@@ -29,7 +29,7 @@ common stuff
 library
     import:           stuff
     exposed-modules:  Railroad
-                      
+                      Railroad.MonadError
     hs-source-dirs:   src
     default-language: GHC2021
     
@@ -41,6 +41,7 @@ test-suite railroad-test
     hs-source-dirs:   test
     main-is:          Main.hs
     other-modules:    RailroadSpec
+                      Railroad.MonadErrorSpec
     build-depends:
                   base ^>=4.20.2.0,
                   hspec  >= 2.11.14 && < 2.12,

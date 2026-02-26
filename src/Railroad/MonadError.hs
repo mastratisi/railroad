@@ -1,14 +1,20 @@
+-- |
+-- Re-implementation of Railroad operators ('??', '?', '?>', etc.)
+-- using 'MonadError' / 'throwError' instead of the Effectful 'Error' effect.
+--
+-- Use this module in classic @mtl@ / @transformers@ / @ExceptT@ code.
+-- For Effectful prefer the versions from "Railroad".
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts    #-}
 
 module Railroad.MonadError
   ( module Railroad          -- re-exports CErr, CRes, Bifurcate, CardinalityError, etc.
   , collapse
-  , (??), (?), (?>), (?~), (?+), (?!), (?∅)
+  , (??), (?), (?>), (??~), (?~), (?+), (?!), (?∅)
   ) where
 
 import           Railroad             hiding (collapse, (?!), (?), (?+), (?>),
-                                       (??), (?~), (?∅))
+                                       (??), (??~), (?~), (?∅))
 
 import           Control.Monad.Except (MonadError (..))
 import           Data.Foldable        (toList)
