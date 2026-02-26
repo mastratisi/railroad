@@ -10,11 +10,11 @@
 module Railroad.MonadError
   ( module Railroad          -- re-exports CErr, CRes, Bifurcate, CardinalityError, etc.
   , collapse
-  , (??), (?), (?>), (??~), (?~), (?+), (?!), (?∅)
+  , (??), (?), (?>), (??~), (?~), (?+), (?!), (?∅), (?@)
   ) where
 
 import           Railroad             hiding (collapse, (?!), (?), (?+), (?>),
-                                       (??), (??~), (?~), (?∅))
+                                       (??), (??~), (?@), (?~), (?∅))
 
 import           Control.Monad.Except (MonadError (..))
 import           Data.Foldable        (toList)
@@ -67,5 +67,13 @@ action ?~ defaultVal = action ??~ (const defaultVal)
   xs <- action
   if null xs then pure () else throwError (toErr xs)
 
-infixl 0 ??, ?, ?~, ?!, ?+, ?∅
+
+
+
+-- | Non-unicode alias for `(?∅)`
+(?@) :: forall m e t a. (MonadError e m, Foldable t)
+     => m (t a) -> (t a -> e) -> m ()
+(?@) = (?∅)
+
+infixl  0 ??, ?, ??~, ?~, ?!, ?+, ?∅, ?@
 infixl 1 ?>

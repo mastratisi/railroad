@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               railroad
-version:            0.1.0.1
+version:            0.1.1.0
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Frederik Kallstrup Mastratisi

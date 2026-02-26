@@ -1,5 +1,9 @@
 # Revision history for railroad
 
+## 0.1.1.0 -- 2026-02-26
+* Add non unicode alias for `(?∅)`
+* Fix the fixity of `(??~)` to be inline with `(?~)`
+
 ## 0.1.0.1 -- 2026-02-26
 
 * Fix that `Railroad.MonadError` is not exposed in the cabal file

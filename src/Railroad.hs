@@ -123,9 +123,12 @@ cardinalityErr onEmpty onTooMany = \case
   xs <- action
   if null xs then pure () else throwError_ (toErr xs)
 
+-- | Non-unicode alias for `(?∅)`
+(?@) :: forall es e t a. (Error e :> es, Foldable t)
+     => Eff es (t a) -> ((t a) -> e) -> Eff es ()
+(?@) = (?∅)
 
-
-infixl  0 ??, ?, ?~, ?!, ?+, ?∅
+infixl  0 ??, ?, ??~, ?~, ?!, ?+, ?∅, ?@
 infixl 1 ?>
 
 
