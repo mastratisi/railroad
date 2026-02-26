@@ -5,13 +5,15 @@ license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Frederik Kallstrup Mastratisi
 maintainer:         mastratisi@proton.me
-category:           Control
+category:           Control, Error Handling
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 synopsis:           A railway oriented mini-DSL for unified error handling.
 description:
     A railway oriented mini-DSL for handling and interpreting error states 
     and cardinality checks across diverse failure types in a unified way.
+homepage:     https://github.com/mastratisi/railroad
+bug-reports:  https://github.com/mastratisi/railroad/issues
 source-repository head
   type:     git
   location: https://github.com/mastratisi/railroad
