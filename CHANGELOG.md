@@ -1,5 +1,11 @@
 # Revision history for railroad
 
+## 0.1.1.1 -- 2026-02-28
+* Widen dependency bounds for better GHC compatibility:
+  - `base` → `>= 4.17 && < 4.23` (supports GHC 9.4 through 9.14)
+  - `effectful` → `>= 2.5 && < 2.7` (allows current 2.6.x series)
+  - `mtl` lower bound relaxed to `>= 2.2`
+
 ## 0.1.1.0 -- 2026-02-26
 * Add non unicode alias for `(?∅)`
 * Fix the fixity of `(??~)` to be inline with `(?~)`
