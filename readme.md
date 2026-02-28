@@ -138,4 +138,4 @@ and power.
 
 
 ## Contact
-Feel free to DM me on https://x.com/mastratisi97 . I find it interresting to know if other people also have found this module useful.  
+Feel free to DM me on https://x.com/mastratisi97 . I find it interesting to know if other people also have found this module useful.  
