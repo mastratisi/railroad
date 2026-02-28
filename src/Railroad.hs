@@ -87,7 +87,7 @@ action ??~ defaultFunc = action >>= either (pure . defaultFunc) pure . bifurcate
 action ?~ defaultVal = action ??~ (const defaultVal)
 
 
--- TODO: Derive instances for it? Functor?
+-- | @IsEmpty@ or @TooMany ta@ — structurally a @Maybe ta@ for cardinality failures
 data CardinalityError ta = IsEmpty | TooMany !ta
 
 -- | Catamorphism for CardinalityError
