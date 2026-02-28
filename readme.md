@@ -53,7 +53,8 @@ railroad = pkgs.haskellPackages.callCabal2nix "railroad" (pkgs.fetchFromGitHub
   }) {};
 ```
 
-
+### Hackage
+The package is under the name `railroad`. Link: https://hackage.haskell.org/package/railroad
 
 
 ## Operators 
@@ -66,8 +67,8 @@ railroad = pkgs.haskellPackages.callCabal2nix "railroad" (pkgs.fetchFromGitHub
 | `??~`    | Recover with a mapped default (error → value) | `action ??~ toDefaultVal`      |
 | `?~`     | Recover with a fixed default value            | `action ?~ defaultVal`         |
 | `?+`     | Require non-empty collection                  | `items ?+ NoResults`           |
-| `?!`     | Require exactly one element                   | `items ?! fromCardinalityErr`      |
-| `?∅`     | Require empty collection                      | `duplicates ?∅ DuplicateFound` |
+| `?!`     | Require exactly one element                   | `items ?! fromCardinalityErr`  |
+| `?∅`     | Require empty collection (alias `?@`)         | `items ?∅ DuplicateFound` |
 
 All operators work uniformly on:
 
@@ -121,21 +122,6 @@ and power.
 | **Learning curve**      | Very low (just a few operators)         | Slightly higher (8 operators, but `??` and `?` cover ~90%)                       |
 | **Size**                | ~150 LOC                                | ~150 LOC                                                                         |
 
-### Side-by-side example
-```haskell
--- hoist-error (4 operators total)
-user <- fetchUser uid <%?> UserNotFound
-user <- fetchUser uid <?> UserNotFound
-```
-
-```haskell
--- Railroad (8 operators, but 2 cover 90 % of code)
-user <- fetchUser uid ? UserNotFound
-user <- fetchUser uid ?? toAppError
-age  <- getAge ?> (> 0) $ NegativeAge
-users <- queryUsers ?+ NoUsersFound
-single <- queryOne ?! WrongCount
-```
 
 ### When to choose which?
 
@@ -149,3 +135,7 @@ single <- queryOne ?! WrongCount
 - Excellent `Validation` support (error accumulation)  
 - Frequent collection checks or predicate guards  
 - Maximum readability in `Effectful` applications  
+
+
+## Contact
+Feel free to DM me on https://x.com/mastratisi97 . I find it interresting to know if other people also have found this module useful.  
