@@ -9,7 +9,7 @@ serveUserAPI = registerStart
    registerStart :: EmailAddress -> Eff UserStack Text
    registerStart email = do
      time <- getTime
-     runQuery (userByEmail time email) ? err503 ∅? const err409
+     runQuery (userByEmail time email) ? err503 ?∅ const err409
      makeJWT email (Just time) ? err500
 ```
 This is how registerStart would be without the operators, using the most common style:
@@ -61,7 +61,7 @@ readability is that there is no need to reason about what branch is
 the succes or error case.
 
 
-The tradeoff is that there are 7 operators in total to familiarize one
+The tradeoff is that there are 8 operators in total to familiarize one
 self with for the full DSL, though there is a single main one, the
 rest are for convenience.
 
