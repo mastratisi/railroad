@@ -1,5 +1,8 @@
 # Revision history for railroad
 
+## 0.1.1.2 -- 2026-04-17
+* Remove strictness annotation from `TooMany` constructor in `CardinalityError`.
+
 ## 0.1.1.1 -- 2026-02-28
 * Widen dependency bounds for better GHC compatibility:
   - `base` → `>= 4.17 && < 4.23` (supports GHC 9.4 through 9.14)

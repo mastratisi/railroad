@@ -88,7 +88,7 @@ action ?~ defaultVal = action ??~ (const defaultVal)
 
 
 -- | @IsEmpty@ or @TooMany ta@ — structurally a @Maybe ta@ for cardinality failures
-data CardinalityError ta = IsEmpty | TooMany !ta
+data CardinalityError ta = IsEmpty | TooMany ta
 
 -- | Catamorphism for CardinalityError
 cardinalityErr :: e -> (ta -> e) -> CardinalityError ta -> e
@@ -130,5 +130,3 @@ cardinalityErr onEmpty onTooMany = \case
 
 infixl  0 ??, ?, ??~, ?~, ?!, ?+, ?∅, ?@
 infixl 1 ?>
-
-
