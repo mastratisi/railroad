@@ -2,42 +2,41 @@
 
 **A terse Haskell railroad error handling DSL abstracting over error functors by catamorphism via `Either`.**
 
-`railroad` is a tiny, opinionated library that brings **Railway Oriented Programming** (ROP) to Haskell.
-It gives you a clean, linear DSL for collapsing error-carrying values
-(`Maybe`, `Either`, `Validation`, `Bool`, and collections thereof)
-directly into your `MonadError` (or `Effectful.Error`) context — no
-noisy `case` expressions, no repeated `either`/`maybe` boilerplate.
+
+The purpose of `railroad` is to error handle tersely, keeping the
+happy-path clean of control-flow and functor unpacking.  It does this
+with 8 combinators, that abstract over binary co-products (`Bool`,
+`Maybe`, `Either`, `Validation`) and Traversables or Folds over them.
+
+```haskell
+import Railroad.MonadError
+import Control.Monad.Except
+
+example :: Either String Int
+example = runExcept $ do
+ -- False ? "error" would make the block short circuit to Left "error"
+ 
+ x <- pure (Just 2) ? "Value missing"
+ 
+ -- Right (Just 1) ~> Just 1 ~> 1
+ y <- pure (Right $ Just 1) ? "Outer fail" ? "Inner fail"
+ 
+ -- [Just 4] ~> [4] ~> 4
+ z <- pure [Just 4] ? "List failed" ?! const "Not a single element"
+ 
+ q <- pure Nothing ?~ 1 
+ 
+ pure (x + y + z + q) -- ~> Right 8 
+```
+
+You just need to work in a monad which supports a `MonadError`-like
+context. Either by being an instance of `MonadError` or in an Eff
+stack with `Error`.
 
 [![Haskell](https://img.shields.io/badge/language-Haskell-%23612a7e.svg)](https://www.haskell.org/)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
 ---
-
-## Why railroad?
-
-Typical error handling in Haskell quickly turns into a tarpit of
-accidental controlflow:
-
-```haskell
-do
-  user <- case fetchUser uid of
-    Nothing -> throwError UserNotFound
-    Just u  -> pure u
-
-  cfg <- case loadConfig path of
-    Left e  -> throwError (toConfigError e)
-    Right c -> pure c
-```
-
-`railroad` replaces all of that with a single, consistent operator
-family that reads linearly:
-```haskell
-do
-  user <- fetchUser uid ? UserNotFound          -- Maybe / Either / Validation / Bool
-  cfg  <- loadConfig path ?? toConfigError      -- custom error mapping
-  items <- queryItems filters ?+ NoResultsFound -- cardinality guard
-```
-
 
 ## Install
 
@@ -57,85 +56,92 @@ railroad = pkgs.haskellPackages.callCabal2nix "railroad" (pkgs.fetchFromGitHub
 The package is under the name `railroad`. Link: https://hackage.haskell.org/package/railroad
 
 
-## Operators 
 
-| Operator | Purpose                                       | Example                        |
-|----------|-----------------------------------------------|--------------------------------|
-| `??`     | Main collapse with custom error mapping       | `action ?? toMyError`          |
-| `?`      | Collapse to constant error                    | `action ? MyError`             |
-| `?>`     | Predicate guard                               | `val ?> isBad toErr`           |
-| `??~`    | Recover with a mapped default (error → value) | `action ??~ toDefaultVal`      |
-| `?~`     | Recover with a fixed default value            | `action ?~ defaultVal`         |
-| `?+`     | Require non-empty collection                  | `items ?+ NoResults`           |
-| `?!`     | Require exactly one element                   | `items ?! fromCardinalityErr`  |
-| `?∅`     | Require empty collection (alias `?@`)         | `items ?∅ DuplicateFound` |
+## Understanding the Operators
 
-All operators work uniformly on:
-
-- `Bool`
-- `Maybe a`
-- `Either e a`
-- `Validation e a`
-- Traversable containers of the above (`[Maybe a]`, `Vector (Either e a)`, …)
+| Operator | Purpose                                       | Example                       |
+|----------|-----------------------------------------------|-------------------------------|
+| `??`     | Derail on error with custom error mapping     | `action ?? toMyError`         |
+| `?`      | Derail with constant error                    | `action ? MyError`            |
+| `?>`     | Derail on predicate                           | `(action ?> isGood) toErr`    |
+| `??~`    | Recover with a mapped default (error → value) | `action ??~ toDefaultVal`     |
+| `?~`     | Recover with a const default value            | `action ?~ defaultVal`        |
+| `?+`     | Derail on empty collection                    | `items ?+ NoResults`          |
+| `?!`     | Derail if not exactly one element             | `items ?! fromCardinalityErr` |
+| `?∅`     | Derail on non-empty collections (alias `?@`)  | `items ?∅ DuplicateFound`     |
 
 
-## Design Highlights
+For the semantics of the operators there are 3 relevant questions:
+What counts as an error?  What happens in the error case?  What
+happens in the success case?
 
-- **Bifurcate** typeclass turns any “railroad-shaped” functor into `Either (CErr f) (CRes f)` via catamorphism  
-- Native support for **Effectful** (`Error` effect) and **MTL** (`MonadError`) via `Railroad.MonadError`  
-- Short-circuiting for `Either`, error accumulation for `Validation`  
 
+### What counts as an error?
+Here we can split the operators into two families. Those that
+interpret errors on the structure of Functors and Traversable of
+Functor. Those that interpret error on the cardinality of Foldables.
+
+For the former, they all (`?`, `??`, `?~`, `??~`) interpret what
+an error is the same way:
+
+ | Functor          | Error Constructor    | Error Info (`CErr`) | Result Info (`CRes`) |
+ |------------------|----------------------|---------------------|----------------------|
+ | `Bool`           | `False`              | `()`                | `()`                 |
+ | `Maybe a`        | `Nothing`            | `()`                | `a`                  |
+ | `Either e a`     | `Left`               | `e`                 | `a`                  |
+ | `Validation e a` | `Failure`            | `e`                 | `a`                  |
+ | `t f`            | Any element is error | `CErr f`            | `t (CRes f)`         |
+
+
+For the latter each operator (`?+`, `?!`, `?∅`) interpret what
+cardinalities of a Foldable counts as errors differently. To wit:
+
+| Operator    | Success Condition   | Error Info               | Result Info |
+|:------------|:--------------------|:-------------------------|:------------|
+| `?+`        | Non-empty           | `()`                     | `t a`       |
+| `?!`        | Exactly one element | `CardinalityError (t a)` | `a`         |
+| `?∅` / `?@` | Is empty            | `t a`                    | `()`        |
+
+Where
+```haskell
+-- | Structurally a @Maybe ta@ for cardinality failures
+data CardinalityError ta = IsEmpty | TooMany ta
+
+-- | Catamorphism for CardinalityError
+cardinalityErr :: e -> (ta -> e) -> CardinalityError ta -> e
+```
+
+### What happens in the error case?
+When an error is detected, the railroad "derails":
+
+1. The provided error-mapping function is applied to the **Error
+   Info** (`CErr` or `CardinalityError`).
+2. The result of the error mapping is thrown
+3. This causes early termination of the monadic sequence.
+
+**Recovery Operators (`?~`, `??~`):** Unlike the other operators,
+these do **not** derail the computation. Instead, they provide a
+"switch" to bring the logic back onto the happy path by providing a
+default value through a recovery function.
+
+
+**Traversal case:** For `Bool`, `Maybe`, `Either` the error
+accumulation is short-circuiting and stops at the first error. For 
+`t (Validation e a)` the semigroup constraint on `e` is used to
+accumulate all errors together. For more information on accumulating
+errors, see the
+[validation](https://hackage.haskell.org/package/validation/docs/Data-Validation.html)
+package on Hackage.
+### What happens in the success case?
+In the success case the result is unwrapped or validated (`?>`, `?+`)
+and the monad continues its execution. Result Info in the above tables
+shows the resulting type inside the monad.
+
+## More
 See [`railroad.md`](railroad.md) for a deeper tour, or just read the
 code at [`Railroad.hs`](src/Railroad.hs). It's a short file.
 
-
-## Comparison with `hoist-error`
-
-Both [`hoist-error`](https://hackage.haskell.org/package/hoist-error)
-and **Railroad** are small, focused Haskell libraries that make error
-handling in MonadError (or Error effects) far more pleasant than raw
-case expressions, either, or maybe. They let you collapse partiality
-structures (Maybe, Either, etc.) into a linear monadic flow unpacking
-values while still controlling how errors are turned into your
-application’s error type.
-
-
-They solve the same core pain point—**“railroad-style” error handling** 
-where the happy path stays on the main track and errors
-branch off cleanly—but they do it with different levels of abstraction
-and power.
-
-
-### Quick Feature Comparison
-
-| Feature                 | hoist-error                             | Railroad                                                                         |
-|-------------------------|-----------------------------------------|----------------------------------------------------------------------------------|
-| **Core mechanism**      | `PluckError` class + `hoistError`       | `Bifurcate` type family + catamorphism to `Either`                               |
-| **Supported functors**  | `Maybe`, `Either e`, `ExceptT e m`      | `Bool`, `Maybe`, `Either`, `Validation`, traversables of any of the above        |
-| **Collection handling** | None (manual)                           | Built-in cardinality: `?+` (non-empty), `?!` (exactly one), `?∅` (must be empty) |
-| **Error mapping**       | Function or constant (`<%?>`, `<?>`)    | Function (`??`) or constant (`?`) with typed `CErr` constructors                 |
-| **Recovery / defaults** | No built-in                             | `?~` / `??~` (constant or computed fallback)                                     |
-| **Guards**              | No                                      | `?>` (predicate → error)                                                         |
-| **Monadic hoisting**    | `<%!?>`, `hoistErrorM`                  | Handled naturally by `>>=` + `??`                                                |
-| **Primary ecosystem**   | Any `MonadError` / `ExceptT` / `mtl`    | `Effectful` `Error` (with full `MonadError` re-export)                           |
-| **Dependencies**        | Minimal (`base` + `mtl`/`transformers`) | `effectful`, `validation`, `mtl`                                                 |
-| **Learning curve**      | Very low (just a few operators)         | Slightly higher (8 operators, but `??` and `?` cover ~90%)                       |
-| **Size**                | ~150 LOC                                | ~150 LOC                                                                         |
-
-
-### When to choose which?
-
-**Choose `hoist-error`** if you want:  
-- The absolute smallest API and dependency footprint  
-- Only need simple `Maybe`/`Either`/`ExceptT` hoisting  
-- Classic `mtl` or `transformers` codebases  
-
-**Choose Railroad** if you want:  
-- A full **DSL** that feels built into the language  
-- Excellent `Validation` support (error accumulation)  
-- Frequent collection checks or predicate guards  
-- Maximum readability in `Effectful` applications  
-
-
 ## Contact
-Feel free to DM me on https://x.com/mastratisi97 . I find it interesting to know if other people also have found this module useful.  
+Feel free to DM me on https://x.com/mastratisi97 . I find it
+interesting to know if other people also have found this module
+useful.
