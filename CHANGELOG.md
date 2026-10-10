@@ -5,6 +5,7 @@
   - `effectful < 2.8`
   - `validation < 1.4`
 * Stop using `Data.Validation.toEither`, which `validation-1.3` no longer exports.
+* Declare `hspec-discover` as a `build-tool-depends` of the test suite, so the tests build outside the nix shell.
 
 ## 0.1.1.3 -- 2026-10-10
 * Documentation fixes: correct "success" typo and the doc comment of `(?)` in `Railroad.MonadError`.
