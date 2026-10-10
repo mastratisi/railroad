@@ -3,7 +3,7 @@
 ## 0.1.1.4 -- 2026-10-10
 * Widen dependency upper bounds (tests pass):
   - `effectful < 2.8`
-  - `validation < 1.4`
+  - `validation < 1.4`, excluding `1.3.0`, which does not build (it uses `foldable1-classes-compat` without declaring it)
 * Stop using `Data.Validation.toEither`, which `validation-1.3` no longer exports.
 * Declare `hspec-discover` as a `build-tool-depends` of the test suite, so the tests build outside the nix shell.
 

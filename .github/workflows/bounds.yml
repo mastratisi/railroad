@@ -1,8 +1,9 @@
 name: bounds
 
-# Weekly: test the oldest/newest allowed dependency versions and any newer
-# releases outside the bounds (scripts/check-bounds.sh). If bounds were widened,
-# commit the result (bounds, version bump, changelog) and push it to master.
+# Weekly: test the oldest/newest allowed dependency versions, any newer
+# releases outside the bounds and any newer GHC (scripts/check-bounds.sh). If
+# bounds or the GHC matrix changed, commit the result (bounds, version bump,
+# changelog, .github/ghc-versions.json) and push it to master.
 # Publishing to Hackage stays a manual step.
 on:
   schedule:
@@ -35,14 +36,14 @@ jobs:
 
       - name: Commit and push widened bounds
         run: |
-          if git diff --quiet -- railroad.cabal CHANGELOG.md; then
+          if git diff --quiet -- railroad.cabal CHANGELOG.md .github/ghc-versions.json; then
             echo "Bounds are up to date; nothing to commit."
             exit 0
           fi
           version=$(sed -n 's/^version: *//p' railroad.cabal)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add railroad.cabal CHANGELOG.md
-          git commit -m "chore: widen dependency bounds, bump to $version" \
-                     -m "Automated by scripts/check-bounds.sh: the test suite passes against the newer releases."
+          git add railroad.cabal CHANGELOG.md .github/ghc-versions.json
+          git commit -m "chore: update bounds and GHC matrix (version $version)" \
+                     -m "Automated by scripts/check-bounds.sh: the test suite passes against the newer releases and GHC."
           git push

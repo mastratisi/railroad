@@ -24,7 +24,7 @@ common stuff
       base >=4.17 && < 4.23,
       effectful >= 2.5 && < 2.8,
       mtl >= 2.2 && < 2.4,
-      validation >= 1.1 && < 1.4
+      validation (>= 1.1 && < 1.3.0) || (> 1.3.0 && < 1.4)
 
 library
     import:           stuff

@@ -7,8 +7,12 @@
 #      (per `cabal outdated`), runs the tests against that release.
 #      If they pass, the upper bound is raised to the next major version.
 #
-# `base` is skipped in step 3: it is tied to the installed GHC, so check it
-# by running this script (or the CI matrix) under each GHC instead.
+#   4. If a newer GHC series than those in .github/ghc-versions.json has been
+#      released, installs it with ghcup and runs the tests. If they pass, adds
+#      the series to that file and raises the `base` upper bound if needed.
+#      Skipped when ghcup is not available.
+#
+# `base` is skipped in step 3: it is tied to the GHC, so step 4 handles it.
 #
 # When any bound is widened, it also bumps the last component of the package
 # version and adds a CHANGELOG.md entry.
@@ -20,6 +24,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 cabal_file=railroad.cabal
 changelog=CHANGELOG.md
+ghc_file=.github/ghc-versions.json
 dry_run=false
 [ "${1:-}" = "--dry-run" ] && dry_run=true
 
@@ -73,7 +78,8 @@ for entry in "${outdated[@]}"; do
     echo "   passes; new upper bound: < $new"
     widened+=("$pkg < $new")
     if ! $dry_run; then
-      sed -i "s/\(\b$pkg *>= *[0-9.]* *&& *< *\)[0-9.]*/\1$new/" "$cabal_file"
+      # replace the last "< X" on the package's line(s)
+      sed -i "/^ *$pkg[ \t]/ s/\(.*< *\)[0-9.]*\(.*\)/\1$new\2/" "$cabal_file"
     fi
   else
     echo "   FAILED (or $latest could not be used); bound unchanged"
@@ -81,11 +87,58 @@ for entry in "${outdated[@]}"; do
   fi
 done
 
+# latest released GHC, e.g. 9.14.1 (skips dated alpha directories like 9.12.20241014)
+latest_ghc() {
+  curl -fsS https://downloads.haskell.org/ghc/ |
+    grep -oE 'href="[0-9]+\.[0-9]+\.[0-9]{1,2}/"' | sed 's/href="//;s/\/"//' |
+    sort -V | tail -1
+}
+
+# version_gt A B: true when A > B
+version_gt() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]; }
+
+echo "== Newer GHC"
+ghc_added=""
+if ! command -v ghcup >/dev/null; then
+  echo "-- ghcup not found; skipping"
+elif ! latest=$(latest_ghc) || [ -z "$latest" ]; then
+  echo "-- could not determine the latest GHC; skipping"
+else
+  series=${latest%.*}
+  if grep -q "\"$series\"" "$ghc_file"; then
+    echo "-- GHC $latest: series $series already in $ghc_file"
+  elif ! ghcup install ghc "$latest"; then
+    echo "-- GHC $latest: ghcup cannot install it yet; skipping"
+  else
+    echo "-- GHC $latest"
+    base_ver=$("ghc-pkg-$latest" field base version --simple-output)
+    if run_tests "dist-bounds-ghc-$latest" -w "ghc-$latest" --allow-newer=base; then
+      echo "   passes (base $base_ver)"
+      ghc_added=$series
+      cur=$(sed -n 's/^ *base *>= *[0-9.]* *&& *< *\([0-9.]*\).*/\1/p' "$cabal_file" | head -1)
+      new=$(upper_bound "$base_ver")
+      if version_gt "$new" "$cur"; then
+        widened+=("base < $new (GHC $series)")
+        if ! $dry_run; then
+          sed -i "/^ *base[ \t]/ s/\(.*< *\)[0-9.]*\(.*\)/\1$new\2/" "$cabal_file"
+        fi
+      fi
+      if ! $dry_run; then
+        sed -i "s/\]\$/, \"$series\"]/" "$ghc_file"
+      fi
+    else
+      echo "   FAILED; GHC $series not added"
+      rejected+=("ghc $latest")
+    fi
+  fi
+fi
+
 echo
 echo "== Summary"
 [ ${#widened[@]} -gt 0 ]  && printf 'widened:  %s\n' "${widened[@]}"
 [ ${#rejected[@]} -gt 0 ] && printf 'rejected: %s\n' "${rejected[@]}"
-[ ${#widened[@]} -eq 0 ] && [ ${#rejected[@]} -eq 0 ] && echo "bounds are up to date"
+[ -n "$ghc_added" ] && echo "added GHC $ghc_added to $ghc_file"
+[ ${#widened[@]} -eq 0 ] && [ ${#rejected[@]} -eq 0 ] && [ -z "$ghc_added" ] && echo "bounds are up to date"
 if [ ${#widened[@]} -gt 0 ] && ! $dry_run; then
   old=$(sed -n 's/^version: *//p' "$cabal_file")
   new="${old%.*}.$((${old##*.} + 1))"

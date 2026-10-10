@@ -1,0 +1,42 @@
+name: ci
+
+# Build and test on every GHC series listed in .github/ghc-versions.json.
+# scripts/check-bounds.sh appends new series to that file.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      ghcs: ${{ steps.read.outputs.ghcs }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: echo "ghcs=$(jq -c . .github/ghc-versions.json)" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ${{ fromJson(needs.versions.outputs.ghcs) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ matrix.ghc }}
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cabal/store
+          key: ci-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('railroad.cabal') }}
+          restore-keys: ci-${{ runner.os }}-${{ matrix.ghc }}-
+
+      - run: cabal update
+      - run: cabal build all --enable-tests
+      - run: cabal test all
