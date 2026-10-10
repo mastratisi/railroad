@@ -1,0 +1,48 @@
+name: bounds
+
+# Weekly: test the oldest/newest allowed dependency versions and any newer
+# releases outside the bounds (scripts/check-bounds.sh). If bounds were widened,
+# commit the result (bounds, version bump, changelog) and push it to master.
+# Publishing to Hackage stays a manual step.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bounds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.10"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cabal/store
+          key: bounds-${{ runner.os }}-${{ hashFiles('railroad.cabal') }}
+          restore-keys: bounds-${{ runner.os }}-
+
+      - run: cabal update
+
+      # Fails the job if the tests break within the current bounds.
+      - run: scripts/check-bounds.sh
+
+      - name: Commit and push widened bounds
+        run: |
+          if git diff --quiet -- railroad.cabal CHANGELOG.md; then
+            echo "Bounds are up to date; nothing to commit."
+            exit 0
+          fi
+          version=$(sed -n 's/^version: *//p' railroad.cabal)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add railroad.cabal CHANGELOG.md
+          git commit -m "chore: widen dependency bounds, bump to $version" \
+                     -m "Automated by scripts/check-bounds.sh: the test suite passes against the newer releases."
+          git push
