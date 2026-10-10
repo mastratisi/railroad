@@ -1,5 +1,8 @@
 # Revision history for railroad
 
+## 0.1.1.3 -- 2026-10-10
+* Documentation fixes: correct "success" typo and the doc comment of `(?)` in `Railroad.MonadError`.
+
 ## 0.1.1.2 -- 2026-04-17
 * Remove strictness annotation from `TooMany` constructor in `CardinalityError`.
 

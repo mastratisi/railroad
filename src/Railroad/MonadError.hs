@@ -29,7 +29,7 @@ collapse toErr = either (throwError . toErr) pure . bifurcate
      => m a -> (CErr a -> e) -> m (CRes a)
 action ?? toErr = action >>= collapse toErr
 
--- | Collapses a structure using an error mapper.
+-- | Collapses a structure using a constant error.
 (?) :: forall m e a. (MonadError e m, Bifurcate a)
     => m a -> e -> m (CRes a)
 action ? err = action ?? const err
@@ -49,14 +49,14 @@ action ??~ defaultFunc = action >>= either (pure . defaultFunc) pure . bifurcate
 (?~) :: forall m a. (Bifurcate a, Monad m) => m a -> CRes a -> m (CRes a)
 action ?~ defaultVal = action ??~ (const defaultVal)
 
--- |  Non-empty is sucess state. Returns the collection as-is.
+-- |  Non-empty is success state. Returns the collection as-is.
 (?+) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> e -> m (t a)
 (?+) action err = do
   xs <- action
   if null xs then throwError err else pure xs
 
--- | Single element is sucess state.  Returns the single element
+-- | Single element is success state.  Returns the single element
 (?!) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> (CardinalityError (t a) -> e) -> m a
 (?!) action toErr = do
@@ -72,9 +72,6 @@ action ?~ defaultVal = action ??~ (const defaultVal)
 (?∅) action toErr = do
   xs <- action
   if null xs then pure () else throwError (toErr xs)
-
-
-
 
 -- | Non-unicode alias for `(?∅)`
 (?@) :: forall m e t a. (MonadError e m, Foldable t)

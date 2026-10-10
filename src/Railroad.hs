@@ -97,7 +97,7 @@ cardinalityErr onEmpty onTooMany = \case
   TooMany xs -> onTooMany xs
 
 
--- |  Non-empty is sucess state. Returns the collection as-is.
+-- |  Non-empty is success state. Returns the collection as-is.
 (?+) :: forall es e t a. (Error e :> es, Foldable t)
      => Eff es (t a) -> e -> Eff es (t a)
 (?+) action err = do
@@ -105,7 +105,7 @@ cardinalityErr onEmpty onTooMany = \case
   if null xs then throwError_ err else pure xs
 
 
--- | Single element is sucess state.  Returns the single element
+-- | Single element is success state.  Returns the single element
 (?!) :: forall es e t a. (Error e :> es, Foldable t)
      => Eff es (t a) -> (CardinalityError (t a) -> e) -> Eff es a
 (?!) action toErr = do
