@@ -9,7 +9,7 @@ module Railroad where
 import           Data.Bool               (bool)
 import           Data.Foldable           (toList)
 import           Data.Kind               (Type)
-import           Data.Validation         (Validation, toEither)
+import           Data.Validation         (Validation (..))
 import           Effectful               (Eff, type (:>))
 import           Effectful.Error.Dynamic (Error, throwError_)
 
@@ -40,7 +40,9 @@ instance Bifurcate (Either e a) where
   bifurcate = id
   -- either :: (e -> b) -> (a -> b) -> Either e a -> b
 instance Bifurcate (Validation e a) where
-  bifurcate = toEither
+  bifurcate = \case
+    Failure e -> Left e
+    Success a -> Right a
   -- validation :: (e -> b) -> (a -> b) -> Validation e a -> b
 
 instance (Traversable t, CErr (t Bool) ~ (), CRes (t Bool) ~ t ())
@@ -56,8 +58,7 @@ instance (Traversable t, CErr (t (Either e a)) ~ e, CRes (t (Either e a)) ~ t a)
   -- pedagogically: bifurcate = bifurcate . sequenceA
 instance (Traversable t, Semigroup e, CErr (t (Validation e a)) ~ e, CRes (t (Validation e a)) ~ t a)
     => Bifurcate (t (Validation e a)) where
-  bifurcate = toEither . sequenceA
-  -- pedagogically: bifurcate = bifurcate . sequenceA
+  bifurcate = bifurcate . sequenceA
 
 -- | Collapses a structure into its inner type or an effectful error
 collapse :: (Error e :> es, Bifurcate f) => (CErr f -> e) -> f -> Eff es (CRes f)

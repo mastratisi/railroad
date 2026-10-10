@@ -1,5 +1,11 @@
 # Revision history for railroad
 
+## 0.1.1.4 -- 2026-10-10
+* Widen dependency upper bounds (tests pass):
+  - `effectful < 2.8`
+  - `validation < 1.4`
+* Stop using `Data.Validation.toEither`, which `validation-1.3` no longer exports.
+
 ## 0.1.1.3 -- 2026-10-10
 * Documentation fixes: correct "success" typo and the doc comment of `(?)` in `Railroad.MonadError`.
 
