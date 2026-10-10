@@ -5,7 +5,6 @@ module Railroad.MonadErrorSpec where
 
 import           Control.Monad.Except
 import           Data.Functor.Identity
-import           Data.Validation
 import           Railroad.MonadError
 import           Test.Hspec
 
@@ -27,9 +26,9 @@ spec = do
 
     describe "Predicate Operator (?>)" $ do
       it "passes when predicate is met" $ do
-        runMonadError (pure 10 ?> (> 5) $ const "too small") `shouldBe` Right 10
+        runMonadError (pure (10 :: Int) ?> (> 5) $ const "too small") `shouldBe` Right 10
       it "fails when predicate is not met" $ do
-        runMonadError (pure 4 ?> (> 5) $ const "too small") `shouldBe` Left "too small"
+        runMonadError (pure (4 :: Int) ?> (> 5) $ const "too small") `shouldBe` Left "too small"
 
     describe "Recovery Operators (?~ and ??~)" $ do
       it "recovers to a constant value with (?~)" $ do
@@ -40,21 +39,21 @@ spec = do
     describe "Cardinality Operators" $ do
       describe "(?+)" $ do
         it "succeeds on non-empty list" $ do
-          runMonadError (pure [1, 2, 3] ?+ "empty") `shouldBe` Right [1, 2, 3]
+          runMonadError (pure [1, 2, 3 :: Int] ?+ "empty") `shouldBe` Right [1, 2, 3]
         it "fails on empty list" $ do
           runMonadError (pure ([] :: [Int]) ?+ "empty") `shouldBe` Left "empty"
 
       describe "(?!)" $ do
         let toErr = cardinalityErr "none" (const "too many")
         it "extracts the single element" $ do
-          runMonadError (pure [42] ?! toErr) `shouldBe` Right 42
+          runMonadError (pure [42 :: Int] ?! toErr) `shouldBe` Right 42
         it "fails on empty" $ do
           runMonadError (pure ([] :: [Int]) ?! toErr) `shouldBe` Left "none"
         it "fails on multiple elements" $ do
-          runMonadError (pure [1, 2] ?! toErr) `shouldBe` Left "too many"
+          runMonadError (pure [1, 2 :: Int] ?! toErr) `shouldBe` Left "too many"
 
       describe "(?∅)" $ do
         it "succeeds on empty" $ do
           runMonadError (pure [] ?∅ const "not empty") `shouldBe` Right ()
         it "fails on non-empty" $ do
-          runMonadError (pure [1] ?∅ const "not empty") `shouldBe` Left "not empty"
+          runMonadError (pure [1 :: Int] ?∅ const "not empty") `shouldBe` Left "not empty"

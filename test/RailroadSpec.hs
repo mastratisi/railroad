@@ -47,11 +47,11 @@ spec = do
       bifurcate input1 `shouldBe` Left "first"
 
     it "List of Validation (Error Accumulation)" $ do
-      let input = [Success 1, Success 2] :: [Validation String Int]
-      bifurcate input `shouldBe` Right [1, 2]
+      let allOk = [Success 1, Success 2] :: [Validation String Int]
+      bifurcate allOk `shouldBe` Right [1, 2]
         -- Note: Validation accumulates because String is a Semigroup
-      let input = [Success 1, Failure "Fail A ", Failure "Fail B"] :: [Validation String Int]
-      bifurcate input `shouldBe` Left "Fail A Fail B"
+      let someBad = [Success 1, Failure "Fail A ", Failure "Fail B"] :: [Validation String Int]
+      bifurcate someBad `shouldBe` Left "Fail A Fail B"
 
   describe "Basic Operators (? and ??)" $ do
     it "unwraps success values with (?)" $ do
@@ -66,10 +66,10 @@ spec = do
 
   describe "Predicate Operator (?>)" $ do
     it "passes when predicate is met" $ do
-      runRail (pure 10 ?> (> 5) $ const "too small") `shouldBe` Right 10
+      runRail (pure (10 :: Int) ?> (> 5) $ const "too small") `shouldBe` Right 10
 
     it "fails when predicate is not met" $ do
-      runRail (pure 4 ?> (> 5) $ const "too small") `shouldBe` Left "too small"
+      runRail (pure (4 :: Int) ?> (> 5) $ const "too small") `shouldBe` Left "too small"
 
   describe "Recovery Operators (?~ and ??~)" $ do
     it "recovers to a constant value with (?~)" $ do
@@ -81,21 +81,21 @@ spec = do
   describe "Cardinality Operators" $ do
     describe "(?+)" $ do
       it "succeeds on non-empty list" $ do
-        runRail (pure [1, 2, 3] ?+ "empty") `shouldBe` Right [1, 2, 3]
+        runRail (pure [1, 2, 3 :: Int] ?+ "empty") `shouldBe` Right [1, 2, 3]
       it "fails on empty list" $ do
         runRail (pure ([] :: [Int]) ?+ "empty") `shouldBe` Left "empty"
 
     describe "(?!)" $ do
       let toErr = cardinalityErr "none" (const "too many")
       it "extracts the single element" $ do
-        runRail (pure [42] ?! toErr) `shouldBe` Right 42
+        runRail (pure [42 :: Int] ?! toErr) `shouldBe` Right 42
       it "fails on empty" $ do
         runRail (pure ([] :: [Int]) ?! toErr) `shouldBe` Left "none"
       it "fails on multiple elements" $ do
-        runRail (pure [1, 2] ?! toErr) `shouldBe` Left "too many"
+        runRail (pure [1, 2 :: Int] ?! toErr) `shouldBe` Left "too many"
 
     describe "(?∅)" $ do
       it "succeeds on empty" $ do
         runRail (pure [] ?∅ const "not empty") `shouldBe` Right ()
       it "fails on non-empty" $ do
-        runRail (pure [1] ?∅ const "not empty") `shouldBe` Left "not empty"
+        runRail (pure [1 :: Int] ?∅ const "not empty") `shouldBe` Left "not empty"
