@@ -1,5 +1,10 @@
 # Revision history for railroad
 
+## 0.2.0.1 -- 2026-10-11
+* Documentation: a README section on the empty-collection gotcha (`?` on a traversable checks that
+  every element succeeds, so an empty one passes; chain `?+` before it), with the quantifiers each
+  operator corresponds to, and a note in the haddocks of `Bifurcate` and `?+`. A test pins it.
+
 ## 0.2.0.0 -- 2026-10-11
 * Breaking: `(?>)` no longer throws. `m ?> p` tags the value (`Right a` if `p a`, else `Left a`,
   carrying the rejected value) and is finished with `?` or `??`: `(m ?> p) toErr` becomes

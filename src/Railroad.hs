@@ -35,6 +35,7 @@ action ? err = action ?? const err
 
 
 -- | Succeeds if non-empty, returning the collection; else throws the constant error.
+-- Chain it before @?@ on a traversable, which an empty collection passes.
 (?+) :: forall es e t a. (Error e :> es, Foldable t)
      => Eff es (t a) -> e -> Eff es (t a)
 (?+) action err = do

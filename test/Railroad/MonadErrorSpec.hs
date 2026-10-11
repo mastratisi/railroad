@@ -36,6 +36,13 @@ spec = do
       in (runMonadError (pure xs ?∅ (\ys -> "got " ++ show (length ys))) === model)
          .&&. (runMonadError (pure xs ?@ (\ys -> "got " ++ show (length ys))) === model)
 
+  describe "an empty collection passes ? (vacuous truth); ?+ requires an element" $ do
+    it "[] passes ? on [Bool]" $ do
+      runMonadError (pure ([] :: [Bool]) ? "denied") `shouldBe` Right []
+    it "?+ then ? needs at least one element, all succeeding" $ property $ \(bs :: [Bool]) ->
+      runMonadError (pure bs ?+ "none" ? "denied")
+        === (if null bs then Left "none" else if and bs then Right (map (const ()) bs) else Left "denied")
+
   describe "fixity (all operators are infixl 1, like >>=, <&> and &)" $ do
     it "composes with <&> without parentheses" $ do
       runMonadError (pure (Right 2 :: Either String Int) ? "e" <&> (+ 1)) `shouldBe` Right 3

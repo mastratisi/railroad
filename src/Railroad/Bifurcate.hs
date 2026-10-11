@@ -37,6 +37,9 @@ type family CRes f :: Type where
   CRes (t a)              = t (CRes a)
 
 -- | A catamorphism to Either
+--
+-- A traversable fails at its first failing element; an empty one succeeds (use @?+@ to
+-- also require an element).
 class Bifurcate f where
   bifurcate :: f -> Either (CErr f) (CRes f)
 instance Bifurcate Bool where

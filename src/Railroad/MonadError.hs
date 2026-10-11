@@ -33,6 +33,7 @@ action ?? toErr = action >>= collapse toErr
 action ? err = action ?? const err
 
 -- | Succeeds if non-empty, returning the collection; else throws the constant error.
+-- Chain it before @?@ on a traversable, which an empty collection passes.
 (?+) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> e -> m (t a)
 (?+) action err = do

@@ -180,6 +180,8 @@ an error is the same way:
  | `Validation e a` | `Failure`            | `e`                 | `a`                  |
  | `t f`            | Any element is error | `CErr f`            | `t (CRes f)`         |
 
+An empty `t f` has no element to fail, so it succeeds: see [the gotcha](#gotcha-an-empty-collection-passes).
+
 
 For the latter each operator (`?+`, `?!`, `?∅`) interpret what
 cardinalities of a Foldable counts as errors differently. To wit:
@@ -248,6 +250,35 @@ first, for example with `note`-like functions:
 Neither throws by itself, and the right-hand side only runs if the left
 one failed. Unlike `Validation`, which runs all independent checks and
 collects every failure, a fallback chain succeeds on the first good answer.
+
+## Gotcha: an empty collection passes
+
+On a traversable, `?` and `??` check that **every** element succeeds
+(∀). Over an empty collection that holds vacuously, like `and []`:
+
+```haskell
+pure ([] :: [Bool]) ? err403    -- succeeds, with []
+```
+
+That surprises a permission check where "no rows" should mean "not
+permitted". Require at least one element first, with `?+` (∃), and
+chain the two checks:
+
+```haskell
+_ <- runQuery (permitted uid asset) ? err500 ?+ err403 ? err403
+--                                    ^ db error ^ >= 1 row ^ all True
+```
+
+The cardinality operators are the other quantifiers, so the usual
+conditions are each one operator, and they chain:
+
+| Operator                            | Succeeds when                       | Logic                           |
+|-------------------------------------|-------------------------------------|---------------------------------|
+| `?` / `??` on `[Bool]`, `[Maybe a]` | every element succeeds              | ∀ x ∈ xs. succeeds x            |
+| `?+`                                | there is at least one element       | ∃ x ∈ xs                        |
+| `?!`                                | there is exactly one element        | ∃! x ∈ xs                       |
+| `?∅`                                | there is no element                 | ¬∃ x ∈ xs                       |
+| `?+` then `?`                       | there is one, and every one succeeds | (∃ x ∈ xs) ∧ (∀ x ∈ xs. succeeds x) |
 
 ## More
 See [`railroad.md`](railroad.md) for a deeper tour, or just read the
