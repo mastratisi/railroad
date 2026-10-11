@@ -1,251 +1,263 @@
-# A Railroad style error handling DSL that abstracts over error functors by catamorphism via Either
+# The idea behind railroad
 
-Check out how terse my Servant http handler is:
+A longer tour than the [readme](readme.md): why the operators exist, and
+why they are small. The code is short enough to read next to this.
+
+## The problem
+
+Here is a servant handler written with the operators:
 
 ```haskell
-serveUserAPI :: ServerT UserAPI (Eff UserStack)
-serveUserAPI = registerStart
- where
-   registerStart :: EmailAddress -> Eff UserStack Text
-   registerStart email = do
-     time <- getTime
-     runQuery (userByEmail time email) ? err503 ?∅ const err409
-     makeJWT email (Just time) ? err500
+registerStart :: EmailAddress -> Eff UserStack Text
+registerStart email = do
+  time <- getTime
+  runQuery (userByEmail time email) ? err503 ?∅ const err409
+  makeJWT email (Just time) ? err500
 ```
-This is how registerStart would be without the operators, using the most common style:
+
+And the same handler in the most common style:
 
 ```haskell
 registerStart :: EmailAddress -> Eff UserStack Text
 registerStart email = do
   time <- getTime
 
-  -- Check if user already exists
   userMaybe <- runQuery (userByEmail time email)
   case userMaybe of
-    Left dbErr -> throwError $ err503
-    Right Nothing -> pure ()              -- good – no user found
-    Right (Just _) -> throwError err409   -- conflict – already registered
+    Left _         -> throwError err503
+    Right Nothing  -> pure ()
+    Right (Just _) -> throwError err409
 
-  -- Create JWT
   jwtResult <- makeJWT email (Just time)
   case jwtResult of
-    Left jwtErr -> throwError $ err500
+    Left _      -> throwError err500
     Right token -> pure token
 ```
-Or alternativly using the `either` and `maybe` catamorphisms:
+
+Or with the eliminators `either` and `maybe`:
+
 ```haskell
-registerStart :: EmailAddress -> Eff UserStack Text
 registerStart email = do
   time <- getTime
-
   runQuery (userByEmail time email) >>= either
     (const $ throwError err503)
-    (maybe (pure ()) 
-	       (const $ throwError err409))
-
+    (maybe (pure ()) (const $ throwError err409))
   makeJWT email (Just time) >>= either
     (const $ throwError err500)
     pure
 ```
 
-Compared to the common style the DSL eliminates both noisy controlflow
-and the manual unwrapping of functors.
+The first version buries the happy path in control flow. The second is
+shorter but you must work out, at every call site, which branch is the
+failure and which eliminator to reach for. The operators remove both
+chores, and the layers read left to right in the order they are peeled.
 
+## Why one operator is enough
 
-Compared to the catamorphism style it is more concise by making the
-success case and throw implicit and it combines linearly. It also
-eliminates the need to choose catamorphism by abstracting over the
-most common functors. Specifically those that are isomorphic to a
-result+error coproduct in structure and semantics. The major win for
-readability is that there is no need to reason about what branch is
-the succes or error case.
+Most error handling in the wild happens in a `MonadError`-like context
+(`mtl`, or an `effectful` stack with `Error`). It is repetitive: a call
+returns what we care about wrapped in something, `Maybe a`, `Either e a`,
+`Bool`, and we case-split, and in the failure branch we translate the
+failure into the monad's error type and throw it.
 
+All of those wrappers are binary coproducts. Up to isomorphism:
 
-The tradeoff is that there are 8 operators in total to familiarize one
-self with for the full DSL, though there is a single main one, the
-rest are for convenience.
+| type             | is isomorphic to  | failure carries | success carries |
+|------------------|-------------------|-----------------|-----------------|
+| `Bool`           | `Either () ()`    | `()`            | `()`            |
+| `Maybe a`        | `Either () a`     | `()`            | `a`             |
+| `Either e a`     | itself            | `e`             | `a`             |
+| `Validation e a` | `Either e a`      | `e`             | `a`             |
 
+(`Validation` and `Either` are isomorphic as *types*; as applicatives
+they differ, and that matters below.)
 
-The underlying idea for the abstraction is that most in-the-wild error
-handling happens in a `MonadError`-like context (here an effect stack
-with the Error effect), and is very repetitive: We have some function
-that returns what we care about wrapped in some functor like `Maybe a`.
-These functor's state space is bifurcated into a space
-representing errors (e.g. `Nothing`) and another representing results
-(e.g. `Just a`). We therefore need to unwrap the function's return by
-case analysis (explicitly or implicitly) where in the error case we
-need to map/interpret the error into our `MonadError`'s error and
-throw it.
+So we fix, once, which summand is the failure, and every one of these
+becomes "an `Either` in disguise".
 
-
-This can be done very tersely and automatically with a single operator
-`(??)` generalizing nearly every common error functor if we just fix what part
-of the functor's space counts as error and notice that `Bool`,
-`Maybe`, `Validation`, and traversables of those functors, morally are
-just specializations of `Either`. Their notable differences, that we
-need to abstract over, is the information they carry with them,
-i.e. the structure of their bifurcated spaces.
-
-
-| functor        | Error Constructor | Error Info | Result Info |
-|----------------|-------------------|------------|-------------|
-| Bool           | False             | ()         | ()          |
-| Maybe a        | Nothing           | ()         | a           |
-| Either e a     | Left              | e          | a           |
-| Validation e a | Failure           | e          | a           |
-| [Either e a]   | --                | e          | [a]         |
-
-To restate more concisely, we need to bifurcate by error/result and
-embed into our outer monad, the one that supports `MonadError`.
-
-
-That all these functors are Either-like (binary coproducts) means that
-the bifurcation can happen by catamorphism into `Either`. Note the
-class, skim the instances:
+## `Bifurcate`
 
 ```haskell
 class Bifurcate f where
   bifurcate :: f -> Either (CErr f) (CRes f)
-  
+
+type family CErr f   -- what the failure carries
+type family CRes f   -- what the success carries
+
 instance Bifurcate Bool where
   bifurcate = bool (Left ()) (Right ())
-  -- bool   :: b -> b -> Bool -> b
-  
+
 instance Bifurcate (Maybe a) where
   bifurcate = maybe (Left ()) Right
-  -- maybe  :: b -> (a -> b) -> Maybe a -> b
-  
+
 instance Bifurcate (Either e a) where
   bifurcate = id
-  -- either :: (e -> b) -> (a -> b) -> Either e a -> b
+
+instance Bifurcate (Validation e a) where
+  bifurcate = validation Left Right
 ```
 
-`CErr`, `CRes` are type families defined by the table above. So `CErr
-Bool = ()` and `CErr (Either e a) = e`.
+For these four, `bifurcate` is an isomorphism onto `Either (CErr f) (CRes f)`.
+`CErr` and `CRes` are type families, so `CErr Bool = ()` and
+`CErr (Either e a) = e`.
 
+## Embedding into the monad
 
-We can then embed into our monad by what I call our collapse combinator:
+A `MonadError e m` gives us a way to embed `Either e` into `m`: the
+fold `either throwError pure`. Precompose it with a translation of the
+failure and with `bifurcate` and you get `collapse`:
+
 ```haskell
 collapse :: (MonadError e m, Bifurcate f) => (CErr f -> e) -> f -> m (CRes f)
 collapse toErr = either (throwError . toErr) pure . bifurcate
 ```
 
-It interprets what the error space means with the toErr function, 
-which will be put to good use in our operator (??).
+`toErr` is where each call site says what the failure means. The one
+real operator is then just `collapse` in Kleisli position:
 
 ```haskell
 (??) :: (MonadError e m, Bifurcate a) => m a -> (CErr a -> e) -> m (CRes a)
 action ?? toErr = action >>= collapse toErr
 ```
 
-this allows code like:
+which allows code like
 
 ```haskell
--- fetchFromS3 permission path :: Either S3Error UserData
-userData <- fetchFromS3 permission path ?? \case ->  
-    BadCredentials -> http403
-    Wrong path -> http404 {body = path ++ " doesn't exist"}
+-- fetchFromS3 permission path :: m (Either S3Error UserData)
+userData <- fetchFromS3 permission path ?? \case
+  BadCredentials -> http403
+  WrongPath      -> http404 { body = path ++ " doesn't exist" }
 ```
 
-i.e. no tarpit of repetitive controlflow yet still allowing per
-callsite interpretation with informative messages; the error type of
-the functor is just threaded into the toErr function.
+No tarpit of repetitive control flow, yet each call site still decides
+how its failure is reported. The failure information is simply passed
+to `toErr`.
 
+`Railroad` provides these for the `effectful` `Error` effect and
+`Railroad.MonadError` for any `MonadError`.
 
-I've also added operators like:
+## The other operators
+
 ```haskell
--- | Collapses a structure using a constant error.
-(?) :: (MonadError e m, Bifurcate a) => m a -> e -> m (CRes a)
+-- constant error: (?) is (??) with const
+(?)   :: (MonadError e m, Bifurcate a) => m a -> e -> m (CRes a)
 action ? err = action ?? const err
 
--- | Tags a value by a predicate; the Left carries the rejected value, and
--- `?` or `??` finish it: `action ?> isGood ?? toErr`
-(?>) :: Functor m => m a -> (a -> Bool) -> m (Either a a)
+-- tag by a predicate; the Left carries the rejected value
+(?>)  :: Functor m => m a -> (a -> Bool) -> m (Either a a)
 action ?> predicate = (\x -> if predicate x then Right x else Left x) <$> action
 
--- | Collapses a structure, and recovers to a default value in the error case
-(?~) ::  Bifurcate a => m a -> CRes a -> m (CRes a)
-action ?~ defaultVal = action >>= either (const (pure defaultVal)) pure . bifurcate
+-- recover instead of throwing; these never throw, and need only a Functor
+(??~) :: (Functor m, Bifurcate a) => m a -> (CErr a -> CRes a) -> m (CRes a)
+(?~)  :: (Functor m, Bifurcate a) => m a -> CRes a -> m (CRes a)
 ```
 
-Let me now explain how I handle the abstraction over traversables of
-`Either` and `Validation`. What is nice about their instances is that
-their semantics are preserved. Traversables of `Either`
-short circuits on the first error, while traversables of `Validation`
-accumulates the errors.
+`?>` does not throw by itself: it produces an `Either a a`, which is
+`Bifurcate`, so a trailing `?` or `??` finishes it:
+`action ?> isGood ?? toErr`.
 
+All operators are `infixl 1`, like `>>=`, `<&>` and `&`, so they chain
+left to right without parentheses.
 
-It's also a nice showcase of how easy it is to extend what my Railroad
-module abstracts over. I only need to add two Bifurcate instances: 
-```haskell
-instance Traversable t => Bifurcate (t (Either e a)) where 
-  bifurcate = sequenceA 
-  -- pedagogically: bifurcate = bifurcate . sequenceA
-  
-instance (Traversable t, Semigroup e) => Bifurcate (t (Validation e a)) where
-  bifurcate = toEither . sequenceA 
-  -- pedagogically: bifurcate = bifurcate . sequenceA
-```
+### Layers
 
-If not for the `Semigroup` constraint (necessary for `Validation`'s
-`sequenceA` to accumulate errors), both could have been implemented
-with the same instance.
-
-
-## Extra: Cardinality operators that play nicely with libraries such as Hasql/Rel8
-
-`(??)` on traversables work nicely when we want all or nothing error
-semantics. Sadly life can sometimes be more complicated. I have
-therefore added a family of 3 operators that morally bifurcates on the
-cardinality of traversables (actually foldable), each with their own
-interpretation of what cardinalities are error state:
-
-```Haskell
--- | Non-empty is success state. Returns the collection as-is.
-(?+) :: (MonadError e m, Foldable t)
-     => m (t a) -> e -> m (t a)
-(?+) action err = do
-  xs <- action
-  if null xs then throwError err else pure xs
-
-
--- | Single element is success state. Returns the single element
-(?!) :: (MonadError e m, Foldable t)
-     => m (t a) -> (CardinalityError (t a) -> e) -> m a
-(?!) action toErr = do
-  xs <- action
-  case toList xs of
-    []  -> throwError $ toErr IsEmpty
-    [x] -> pure x
-    _   -> throwError $ toErr $ TooMany xs
-
-
--- | Empty is success state. Returns Unit.
-(?∅) :: (MonadError e m, Foldable t)
-     => m (t a) -> ((t a) -> e) -> m ()
-(?∅) action toErr = do
-  xs <- action
-  if null xs then pure () else throwError (toErr xs)
-```
-
-To support the `(?!)` operator I have created a Maybe-like type, with
-a convenience catamorphism that in normal usage is a catamorphism to
-the error type of the monad `(?!)` is working in.
+Each operator peels one layer. For `Either e (Maybe a)` the outer
+`Either` is peeled first:
 
 ```haskell
-data CardinalityError ta = IsEmpty | TooMany !ta
+pure (Right (Just 1)) ? "outer" ? "inner"   -- Either e (Maybe a) ~> Maybe a ~> a
+```
 
--- | Catamorphism for CardinalityError
+This relies on the instances for traversables overlapping the base ones
+(`Either e (Maybe a)` is also a `t (Maybe a)` with `t = Either e`). The
+traversable instances are marked `INCOHERENT` so the base instance wins
+and the outermost layer is the one peeled.
+
+## Traversables
+
+For a traversable `t` of one of the base types, `bifurcate` is
+
+```haskell
+bifurcate = bifurcate . sequenceA          -- for Maybe, Validation
+bifurcate = sequenceA                      -- for Either (already an Either)
+bifurcate = bifurcate . sequenceA . fmap bifurcate   -- for Bool, which is not an Applicative
+```
+
+`sequenceA` swaps the two layers, `t (f a) -> f (t a)`, using the
+`Applicative` of `f`. That is why the semantics of each type carry over
+unchanged:
+
+- `Either e` is applicative by short-circuiting: the first `Left` wins.
+- `Validation e` is applicative by accumulating failures with the
+  `Semigroup` on `e`.
+
+So `Validation` is *not* just `Either` under another name. The two are
+isomorphic as types, but their `Applicative`s differ, and the `Semigroup`
+constraint is a consequence of that, not the only difference. The two
+instances therefore cannot be merged into one.
+
+This is also not an isomorphism any more: `[Either e a] -> Either e [a]`
+forgets which element failed and everything after the first failure. It
+is a lossy projection, which is exactly what "all or nothing" means.
+
+An empty traversable succeeds, since `sequenceA [] = pure []`. That is
+vacuous truth, like `and []`, and the readme's
+[gotcha](readme.md#gotcha-an-empty-collection-passes) shows how to
+require at least one element with `?+`.
+
+## Cardinality operators
+
+Traversal gives all-or-nothing semantics. Sometimes the question is how
+many elements there are, for example the rows of a database query. Three
+operators bifurcate on the cardinality of a `Foldable`:
+
+```haskell
+-- non-empty is success; returns the collection
+(?+) :: (MonadError e m, Foldable t) => m (t a) -> e -> m (t a)
+
+-- exactly one is success; returns the element
+(?!) :: (MonadError e m, Foldable t) => m (t a) -> (CardinalityError (t a) -> e) -> m a
+
+-- empty is success; returns ()   (ASCII alias: ?@)
+(?∅) :: (MonadError e m, Foldable t) => m (t a) -> (t a -> e) -> m ()
+```
+
+`?!` inspects `toList xs` and splits it into the cases none, one, many.
+Its failure is a type that records which of the two failures happened
+(it is isomorphic to `Maybe ta`):
+
+```haskell
+data CardinalityError ta = IsEmpty | TooMany ta
+
 cardinalityErr :: e -> (ta -> e) -> CardinalityError ta -> e
 cardinalityErr onEmpty onTooMany = \case
-  IsEmpty -> onEmpty
+  IsEmpty    -> onEmpty
   TooMany xs -> onTooMany xs
 ```
 
-## Recap
-Using a catamorphism via a binary coproduct algebra we get a nice
-family of error handling operators `(??, ?, ?>, ?~)`.  And using a
-catamorphism via a simple cardinality algebra (0, 1, many) we get
-another nice family of operators for handling result-sets `(?+, ?!,
-?∅)`.
+`cardinalityErr` is the eliminator of `CardinalityError`, so in normal use
+it is how you build the monad's error from either case.
 
+## Fallbacks
+
+`?|` and `?|<>` run the right action only when the left one fails, so the
+sources may be different structures with the same success type:
+
+```haskell
+cache k ?| db k ?| legacy k ? NotFound
+```
+
+`?|` keeps the last error. `?|<>` combines all of them with `<>`, which
+needs the sources to share an error type. Both are associative, and
+neither throws by themselves. See the readme for details.
+
+## Recap
+
+- `Bifurcate` maps a wrapper to `Either (CErr f) (CRes f)`: an
+  isomorphism for the base types, a lossy projection for traversables.
+- `collapse` embeds that `Either` into a `MonadError`, translating the
+  failure on the way; `??` and `?` are `collapse` in Kleisli position.
+- `?>`, `?~` and `??~` and the fallbacks never throw: they produce or
+  consume `Bifurcate` values.
+- `?+`, `?!` and `?∅` bifurcate on cardinality (none, one, many)
+  instead of structure.
