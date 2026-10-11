@@ -4,6 +4,8 @@
 module Railroad.MonadErrorSpec where
 
 import           Control.Monad.Except
+import           Control.Monad.State   (State, modify, runState)
+import           Data.Validation       (Validation (..))
 import           Data.Functor.Identity
 import           Railroad.MonadError
 import           Test.Hspec
@@ -11,6 +13,13 @@ import           Test.Hspec
 -- Helper to run MonadError computations in pure Either
 runMonadError :: ExceptT String Identity a -> Either String a
 runMonadError = runIdentity . runExceptT
+
+-- Like 'runMonadError', and counts how many 'tick's ran.
+runCount :: ExceptT String (State Int) a -> (Either String a, Int)
+runCount m = runState (runExceptT m) 0
+
+tick :: ExceptT String (State Int) ()
+tick = modify (+ 1)
 
 spec :: Spec
 spec = do
@@ -57,3 +66,39 @@ spec = do
           runMonadError (pure [] ?∅ const "not empty") `shouldBe` Right ()
         it "fails on non-empty" $ do
           runMonadError (pure [1 :: Int] ?∅ const "not empty") `shouldBe` Left "not empty"
+
+    describe "Fallback Operator (?|)" $ do
+      it "does not run the right action when the left succeeds" $ do
+        runCount (pure (Just 'a') ?| (tick >> pure (Nothing :: Maybe Char)) ? "none")
+          `shouldBe` (Right 'a', 0)
+      it "runs the right action when the left fails" $ do
+        runCount (pure (Nothing :: Maybe Int) ?| (tick >> pure (Just 7)) ? "none")
+          `shouldBe` (Right 7, 1)
+      it "keeps the last error when everything fails" $ do
+        runCount (pure (Left "first" :: Either String Int) ?| pure (Left "second") ?? id)
+          `shouldBe` (Left "second", 0)
+        runCount (pure (Nothing :: Maybe Int) ?| pure Nothing ? "none")
+          `shouldBe` (Left "none", 0)
+      it "chains mixed structures, stopping at the first success" $ do
+        let chain = pure (Nothing :: Maybe Int) ?| pure (Left "db" :: Either String Int)
+                      ?| (tick >> pure (Just 3)) ?| (tick >> tick >> pure (Just 4)) ? "gone"
+        runCount chain `shouldBe` (Right 3, 1)
+
+    describe "Accumulating Fallback Operator (?|<>)" $ do
+      it "does not run the right action when the left succeeds" $ do
+        runCount (pure (Just 'a') ?|<> (tick >> pure (Nothing :: Maybe Char)) ? "none")
+          `shouldBe` (Right 'a', 0)
+      it "combines the errors in source order when everything fails" $ do
+        runCount (pure (Left "A" :: Either String Int) ?|<> pure (Left "B") ?|<> pure (Left "C") ?? id)
+          `shouldBe` (Left "ABC", 0)
+      it "mixes structures with the same error and success types" $ do
+        runCount (pure (Left "A" :: Either String Int) ?|<> pure (Failure "B" :: Validation String Int) ?? id)
+          `shouldBe` (Left "AB", 0)
+        runCount (pure (Left "A" :: Either String Int) ?|<> (tick >> pure (Success 5 :: Validation String Int)) ?? id)
+          `shouldBe` (Right 5, 1)
+      it "drops earlier errors once a later source succeeds" $ do
+        runCount (pure (Left "A" :: Either String Int) ?|<> pure (Left "B") ?|<> pure (Right 3) ?? id)
+          `shouldBe` (Right 3, 0)
+      it "needs nothing special for Maybe sources" $ do
+        runCount (pure (Nothing :: Maybe Int) ?|<> pure Nothing ? "none")
+          `shouldBe` (Left "none", 0)

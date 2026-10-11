@@ -125,6 +125,7 @@ else
       fi
       if ! $dry_run; then
         sed -i "s/\]\$/, \"$series\"]/" "$ghc_file"
+        sed -i "s/^\(tested-with:.*\)\$/\1, GHC == $latest/" "$cabal_file"
       fi
     else
       echo "   FAILED; GHC $series not added"

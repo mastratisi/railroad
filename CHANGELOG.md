@@ -1,5 +1,18 @@
 # Revision history for railroad
 
+## 0.1.2.0 -- 2026-10-11
+* Add the fallback operator `(?|)`: runs the left action, and only if it fails runs the right one.
+  The two sides can be different structures (`Maybe`, `Either`, ...) with the same success type, the
+  last error is kept, and the result chains and is finished with `?` or `??`. It never throws, so
+  `Railroad.MonadError` re-exports the one definition.
+* Add `(?|<>)`, the same fallback but when every source fails the errors are combined with `<>`
+  in source order. The sources must agree on the error type (`CErr`) and the success type (`CRes`).
+* Documentation: a servant + effectful example and a section on the fallback operators in the README,
+  clearer haddocks (module headers, `CErr`, `CRes`, each operator), and `readme.md` in `extra-doc-files`.
+* Add `tested-with` (GHC 9.4.8 to 9.14.1, the versions the test suite is run on).
+* Write the `validation` bound without a trailing zero or a strict lower bound:
+  `(>= 1.1 && < 1.3) || (>= 1.3.1 && < 1.4)`, the same set of releases as in 0.1.1.5.
+
 ## 0.1.1.5 -- 2026-10-11
 * Exclude `validation-1.3.0` from the bounds: it does not build (it uses `foldable1-classes-compat`
   without declaring it). `validation >= 1.3.1` needs `base >= 4.18`, so on GHC 9.4 the solver picked

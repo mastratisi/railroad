@@ -2,10 +2,30 @@
 
 **A terse Haskell railroad error handling DSL abstracting over error functors by catamorphism via `Either`.**
 
+Instead of
+
+```haskell
+rows <- runQuery (userById uid) >>= either (const (throwError err503)) pure
+user <- case rows of
+  []  -> throwError err404
+  [u] -> pure u
+  _   -> throwError err500
+```
+
+write
+
+```haskell
+user <- runQuery (userById uid) ? err503 ?! cardinalityErr err404 (const err500)
+```
+
+Here `runQuery` returns `Eff es (Either DbError [row])`. Each operator
+peels one layer (the database failure, then "exactly one row") and says
+what to throw if it fails, so the happy path stays one line. A longer
+[servant example](#example-a-servant-backend) is below.
 
 The purpose of `railroad` is to error handle tersely, keeping the
 happy-path clean of control-flow and functor unpacking.  It does this
-with 8 combinators, that abstract over binary co-products (`Bool`,
+with 10 combinators, that abstract over binary co-products (`Bool`,
 `Maybe`, `Either`, `Validation`) and Traversables or Folds over them.
 
 ```haskell
@@ -57,6 +77,60 @@ The package is under the name `railroad`. Link: https://hackage.haskell.org/pack
 
 
 
+## Example: a servant backend
+
+Handlers in a servant + `effectful` backend (adapted from a real one)
+are chains of queries and checks where each failure is an HTTP status.
+The queries return `Eff es (Either DbError [row])`: a database failure
+wrapping the rows. With `railroad`:
+
+```haskell
+getUser :: Error ServerError :> es => UserId -> Eff es UserDTO
+getUser uid = do
+  user <- runQuery (userById uid) ? err503 ?! cardinalityErr err404 (const err500)
+  pure (toUserDTO user)
+
+register :: Error ServerError :> es => Email -> Eff es Token
+register email = do
+  runQuery (userByEmail email) ? err503 ?∅ const err409   -- must not exist yet
+  makeJWT email ? err500
+
+updateAsset :: Error ServerError :> es => UserId -> Asset -> Eff es ()
+updateAsset uid asset = do
+  _ <- runQuery (permitted uid asset) ? err500 ? err403   -- db error, then "not permitted"
+  ...
+```
+
+Each operator peels one layer, left to right: `? err503` unwraps the
+`Either`, then `?!` demands exactly one row (none is a 404, several a
+500). The same handlers in plain Haskell:
+
+```haskell
+getUser' uid = do
+  rows <- runQuery (userById uid) >>= either (const (throwError err503)) pure
+  user <- case rows of
+    []  -> throwError err404
+    [u] -> pure u
+    _   -> throwError err500
+  pure (toUserDTO user)
+
+register' email = do
+  rows <- runQuery (userByEmail email) >>= either (const (throwError err503)) pure
+  unless (null rows) (throwError err409)
+  makeJWT email >>= either (const (throwError err500)) pure
+
+updateAsset' uid asset = do
+  allowed <- runQuery (permitted uid asset) >>= either (const (throwError err500)) pure
+  unless (and allowed) (throwError err403)
+  ...
+```
+
+The failure paths no longer take up lines, and the order of the layers is
+the order you read them in. Validating a request with a `Validation`
+reports every problem at once: `pure (map validateFile files) ?? badRequest`
+turns all the invalid files into one 400. `Railroad.MonadError` has the
+same operators for plain `MonadError`, including servant's `Handler`.
+
 ## Understanding the Operators
 
 | Operator | Purpose                                       | Example                       |
@@ -69,6 +143,8 @@ The package is under the name `railroad`. Link: https://hackage.haskell.org/pack
 | `?+`     | Derail on empty collection                    | `items ?+ NoResults`          |
 | `?!`     | Derail if not exactly one element             | `items ?! fromCardinalityErr` |
 | `?∅`     | Derail on non-empty collections (alias `?@`)  | `items ?∅ DuplicateFound`     |
+| `?\|`    | Fall back to another action on error         | `cache k ?\| db k ? NotFound` |
+| `?\|<>`  | Fall back, combining the errors with `<>`     | `a ?\|<> b ?? toErr`         |
 
 
 For the semantics of the operators there are 3 relevant questions:
@@ -136,6 +212,30 @@ package on Hackage.
 In the success case the result is unwrapped or validated (`?>`, `?+`)
 and the monad continues its execution. Result Info in the above tables
 shows the resulting type inside the monad.
+
+### Fallback operators
+`?|` and `?|<>` try one source after another and stop at the first
+success. They are for sources that may be different structures (for
+example a cache returning `Maybe` and a database returning `Either`)
+with the same success type (`CRes`). The result is bifurcatable, so a
+final `?` or `??` turns a total failure into a throw:
+
+```haskell
+cache k ?| db k ?| legacy k ? NotFound
+```
+
+`?|` keeps the last error. `?|<>` also needs the sources to share the
+error type (`CErr`) and combines all the errors with `<>`, in source
+order, when every source fails. Map differing error types to a common one
+first, for example with `note`-like functions:
+
+```haskell
+(cache k <&> note [CacheMiss]) ?|<> (db k <&> first pure) ?? NotFound
+```
+
+Neither throws by itself, and the right-hand side only runs if the left
+one failed. Unlike `Validation`, which runs all independent checks and
+collects every failure, a fallback chain succeeds on the first good answer.
 
 ## More
 See [`railroad.md`](railroad.md) for a deeper tour, or just read the
