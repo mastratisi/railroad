@@ -53,18 +53,20 @@ instance Bifurcate (Validation e a) where
     Success a -> Right a
   -- validation :: (e -> b) -> (a -> b) -> Validation e a -> b
 
-instance (Traversable t, CErr (t Bool) ~ (), CRes (t Bool) ~ t ())
+-- The traversable instances overlap the base ones for e.g. @Either e (Maybe a)@. They are
+-- INCOHERENT so the base instance wins and the outer layer is peeled first (@m ? e1 ? e2@).
+instance {-# INCOHERENT #-} (Traversable t, CErr (t Bool) ~ (), CRes (t Bool) ~ t ())
     => Bifurcate (t Bool) where
   bifurcate = bifurcate . sequenceA . fmap bifurcate
   -- Bool is not Applicative, so we need to map to Either first
-instance (Traversable t, CErr (t (Maybe a)) ~ (), CRes (t (Maybe a)) ~ t a)
+instance {-# INCOHERENT #-} (Traversable t, CErr (t (Maybe a)) ~ (), CRes (t (Maybe a)) ~ t a)
     => Bifurcate (t (Maybe a)) where
   bifurcate = bifurcate . sequenceA
-instance (Traversable t, CErr (t (Either e a)) ~ e, CRes (t (Either e a)) ~ t a)
+instance {-# INCOHERENT #-} (Traversable t, CErr (t (Either e a)) ~ e, CRes (t (Either e a)) ~ t a)
     => Bifurcate (t (Either e a)) where
   bifurcate = sequenceA
   -- pedagogically: bifurcate = bifurcate . sequenceA
-instance (Traversable t, Semigroup e, CErr (t (Validation e a)) ~ e, CRes (t (Validation e a)) ~ t a)
+instance {-# INCOHERENT #-} (Traversable t, Semigroup e, CErr (t (Validation e a)) ~ e, CRes (t (Validation e a)) ~ t a)
     => Bifurcate (t (Validation e a)) where
   bifurcate = bifurcate . sequenceA
 

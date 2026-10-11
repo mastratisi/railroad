@@ -102,3 +102,21 @@ spec = do
       it "needs nothing special for Maybe sources" $ do
         runCount (pure (Nothing :: Maybe Int) ?|<> pure Nothing ? "none")
           `shouldBe` (Left "none", 0)
+
+    describe "Layered structures (the outermost layer is peeled first)" $ do
+      it "peels Either of Maybe one layer at a time" $ do
+        runMonadError (pure (Right (Just 1) :: Either String (Maybe Int)) ? "outer" ? "inner") `shouldBe` Right 1
+        runMonadError (pure (Right Nothing :: Either String (Maybe Int)) ? "outer" ? "inner") `shouldBe` Left "inner"
+        runMonadError (pure (Left "x" :: Either String (Maybe Int)) ? "outer" ? "inner") `shouldBe` Left "outer"
+      it "peels Maybe of Maybe and Either of Bool" $ do
+        runMonadError (pure (Just Nothing :: Maybe (Maybe Int)) ? "o" ? "i") `shouldBe` Left "i"
+        runMonadError (pure (Right False :: Either String Bool) ? "db" ? "denied") `shouldBe` Left "denied"
+      it "runs the README example" $ do
+        let readmeExample :: Either String Int
+            readmeExample = runExcept $ do
+              x <- pure (Just 2) ? "Value missing"
+              y <- pure (Right $ Just 1) ? "Outer fail" ? "Inner fail"
+              z <- pure [Just 4] ? "List failed" ?! const "Not a single element"
+              q <- pure Nothing ?~ 1
+              pure (x + y + z + q)
+        readmeExample `shouldBe` Right 8

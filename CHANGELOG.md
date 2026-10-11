@@ -1,5 +1,11 @@
 # Revision history for railroad
 
+## 0.1.2.1 -- 2026-10-11
+* Fix overlapping instances: `Either e (Maybe a)`, `Maybe (Maybe a)`, `Either e Bool` and the like
+  did not compile when used with `?`, so nested layers could not be peeled (the README's first
+  example did not compile). The outermost layer is now peeled first, as documented; lists and other
+  traversables inside a layer behave as before. Tests added, including the README example.
+
 ## 0.1.2.0 -- 2026-10-11
 * Add the fallback operator `(?|)`: runs the left action, and only if it fails runs the right one.
   The two sides can be different structures (`Maybe`, `Either`, ...) with the same success type, the

@@ -150,3 +150,26 @@ spec = do
     it "needs nothing special for Maybe sources" $ do
       runCount (pure (Nothing :: Maybe Int) ?|<> pure Nothing ? "none")
         `shouldBe` (Left "none", 0)
+
+  describe "Layered structures (the outermost layer is peeled first)" $ do
+    it "peels Either of Maybe one layer at a time" $ do
+      let ok = pure (Right (Just 1)) :: Eff '[Error String] (Either String (Maybe Int))
+      runRail (ok ? "outer" ? "inner") `shouldBe` Right 1
+      runRail (pure (Right Nothing :: Either String (Maybe Int)) ? "outer" ? "inner") `shouldBe` Left "inner"
+      runRail (pure (Left "x" :: Either String (Maybe Int)) ? "outer" ? "inner") `shouldBe` Left "outer"
+
+    it "peels Maybe of Maybe" $ do
+      runRail (pure (Just (Just 1) :: Maybe (Maybe Int)) ? "o" ? "i") `shouldBe` Right 1
+      runRail (pure (Just Nothing :: Maybe (Maybe Int)) ? "o" ? "i") `shouldBe` Left "i"
+      runRail (pure (Nothing :: Maybe (Maybe Int)) ? "o" ? "i") `shouldBe` Left "o"
+
+    it "peels Either of Bool" $ do
+      runRail (pure (Right True :: Either String Bool) ? "db" ? "denied") `shouldBe` Right ()
+      runRail (pure (Right False :: Either String Bool) ? "db" ? "denied") `shouldBe` Left "denied"
+      runRail (pure (Left "x" :: Either String Bool) ? "db" ? "denied") `shouldBe` Left "db"
+
+    it "peels Either of Either" $ do
+      runRail (pure (Right (Left "in") :: Either String (Either String Int)) ? "out" ?? id) `shouldBe` Left "in"
+
+    it "still traverses a list inside a layer" $ do
+      runRail (pure (Just [Just 1, Just 2 :: Maybe Int]) ? "o" ? "i") `shouldBe` Right [1, 2]
