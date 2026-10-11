@@ -26,7 +26,7 @@ collapse toErr = either (throwError . toErr) pure . bifurcate
      => m a -> (CErr a -> e) -> m (CRes a)
 action ?? toErr = action >>= collapse toErr
 
--- | Unwraps the success case, or throws a constant error. Chains to peel nested layers:
+-- | Unwraps the success case, or throws a constant error. Chains to unwrap nested layers:
 -- @m ? e1 ? e2@.
 (?) :: forall m e a. (MonadError e m, Bifurcate a)
     => m a -> e -> m (CRes a)

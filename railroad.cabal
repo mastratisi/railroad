@@ -14,7 +14,7 @@ description:
     Railway-oriented error handling for Haskell: one short operator per
     step, and the failure paths stop taking up lines.
 
-    Each operator peels one layer of a result (@Maybe@, @Either@, @Bool@,
+    Each operator unwraps one layer of a result (@Maybe@, @Either@, @Bool@,
     @Validation@, or a collection of them) and says what to throw if it
     failed. Where you would write
 
@@ -28,7 +28,7 @@ description:
 
     > user <- runQuery (userById uid) ? err503 ?! cardinalityErr err404 (const err500)
 
-    Layers are peeled left to right: @? err503@ unwraps the database
+    Layers are unwrapped left to right: @? err503@ unwraps the database
     @Either@, then @?!@ demands exactly one row (none is a 404, several a 500).
 
     * Works in any @MonadError@ ("Railroad.MonadError": @mtl@, @ExceptT@,

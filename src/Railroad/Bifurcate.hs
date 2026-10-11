@@ -58,7 +58,7 @@ instance Bifurcate (Validation e a) where
   -- validation :: (e -> b) -> (a -> b) -> Validation e a -> b
 
 -- The traversable instances overlap the base ones for e.g. @Either e (Maybe a)@. They are
--- INCOHERENT so the base instance wins and the outer layer is peeled first (@m ? e1 ? e2@).
+-- INCOHERENT so the base instance wins and the outer layer is unwrapped first (@m ? e1 ? e2@).
 instance {-# INCOHERENT #-} (Traversable t, CErr (t Bool) ~ (), CRes (t Bool) ~ t ())
     => Bifurcate (t Bool) where
   bifurcate = bifurcate . sequenceA . fmap bifurcate

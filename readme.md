@@ -19,7 +19,7 @@ user <- runQuery (userById uid) ? err503 ?! cardinalityErr err404 (const err500)
 ```
 
 Here `runQuery` returns `Eff es (Either DbError [row])`. Each operator
-peels one layer (the database failure, then "exactly one row") and says
+unwraps one layer (the database failure, then "exactly one row") and says
 what to throw if it fails, so the happy path stays one line. A longer
 [servant example](#example-a-servant-backend) is below.
 
@@ -109,7 +109,7 @@ updateAsset uid asset = do
   ...
 ```
 
-Each operator peels one layer, left to right: `? err503` unwraps the
+Each operator unwraps one layer, left to right: `? err503` unwraps the
 `Either`, then `?!` demands exactly one row (none is a 404, several a
 500). The same handlers in plain Haskell:
 

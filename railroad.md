@@ -50,7 +50,7 @@ registerStart email = do
 The first version buries the happy path in control flow. The second is
 shorter but you must work out, at every call site, which branch is the
 failure and which eliminator to reach for. The operators remove both
-chores, and the layers read left to right in the order they are peeled.
+chores, and the layers read left to right in the order they are unwrapped.
 
 ## Why one operator is enough
 
@@ -161,8 +161,8 @@ left to right without parentheses.
 
 ### Layers
 
-Each operator peels one layer. For `Either e (Maybe a)` the outer
-`Either` is peeled first:
+Each operator unwraps one layer. For `Either e (Maybe a)` the outer
+`Either` is unwrapped first:
 
 ```haskell
 pure (Right (Just 1)) ? "outer" ? "inner"   -- Either e (Maybe a) ~> Maybe a ~> a
@@ -171,7 +171,7 @@ pure (Right (Just 1)) ? "outer" ? "inner"   -- Either e (Maybe a) ~> Maybe a ~> 
 This relies on the instances for traversables overlapping the base ones
 (`Either e (Maybe a)` is also a `t (Maybe a)` with `t = Either e`). The
 traversable instances are marked `INCOHERENT` so the base instance wins
-and the outermost layer is the one peeled.
+and the outermost layer is the one unwrapped.
 
 ## Traversables
 

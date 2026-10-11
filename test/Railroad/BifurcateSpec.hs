@@ -35,7 +35,7 @@ spec = do
       bifurcate xs === (case [e | Failure e <- xs] of
                           [] -> Right [a | Success a <- xs]
                           es -> Left (concat es))
-    it "peels only the outermost base layer" $ property $
+    it "unwraps only the outermost base layer" $ property $
       \(e :: Either Int (Maybe Int)) (m :: Maybe (Maybe Int)) (b :: Either Int Bool) ->
         (bifurcate e === e) .&&. (bifurcate m === maybe (Left ()) Right m) .&&. (bifurcate b === b)
 
