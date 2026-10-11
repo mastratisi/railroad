@@ -4,6 +4,7 @@
 module Railroad.MonadErrorSpec where
 
 import           Control.Monad.Except
+import           Control.Monad.State   (modify, runState)
 import           Data.Bifunctor        (first)
 import           Data.Functor          ((<&>))
 import           Data.Functor.Identity
@@ -54,6 +55,10 @@ spec = do
     it "chains the fallback with ? and ?>" $ do
       runMonadError (pure (Nothing :: Maybe Int) ?| pure (Right 9 :: Either String Int) ? "none" ?> (> 5) ? "small")
         `shouldBe` Right 9
+    it "logs a failure with ?<*, then still throws the mapped error" $ do
+      let run m = runState (runExceptT m) ([] :: [Int])
+      run (pure (Left 3 :: Either Int Int) ?<* (\e -> modify (e :)) ? "failed") `shouldBe` (Left "failed", [3])
+      run (pure (Right 4 :: Either Int Int) ?<* (\e -> modify (e :)) ? "failed") `shouldBe` (Right 4, [])
     it "gives the rejected value of ?> to the error mapper" $ do
       runMonadError (pure (4 :: Int) ?> (> 5) ?? \n -> "rejected " ++ show n) `shouldBe` Left "rejected 4"
 

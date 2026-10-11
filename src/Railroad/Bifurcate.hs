@@ -10,7 +10,7 @@
 -- throw. The throwing operators are in "Railroad" and "Railroad.MonadError".
 module Railroad.Bifurcate
   ( Bifurcate (..), CErr, CRes
-  , (?>), (??~), (?~), (?|), (?|<>)
+  , (?>), (??~), (?~), (?|), (?|<>), (?<*)
   ) where
 
 import           Data.Bifunctor  (first)
@@ -104,4 +104,9 @@ ma ?| mb = ma >>= either (const (bifurcate <$> mb)) (pure . Right) . bifurcate
        => m a -> m b -> m (Either (CErr a) (CRes a))
 ma ?|<> mb = ma >>= either (\ea -> first (ea <>) . bifurcate <$> mb) (pure . Right) . bifurcate
 
-infixl 1 ??~, ?~, ?|, ?|<>, ?>
+-- | Runs an effect on the failure and passes the value through unchanged. Put it before @?@
+-- or @??@ to log what they would discard: @m ?\<* logIt ? err@.
+(?<*) :: forall m a. (Monad m, Bifurcate a) => m a -> (CErr a -> m ()) -> m a
+action ?<* handler = action >>= \x -> x <$ either handler (const (pure ())) (bifurcate x)
+
+infixl 1 ??~, ?~, ?|, ?|<>, ?>, ?<*

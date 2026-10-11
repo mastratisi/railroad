@@ -150,11 +150,19 @@ action ?> predicate = (\x -> if predicate x then Right x else Left x) <$> action
 -- recover instead of throwing; these never throw, and need only a Functor
 (??~) :: (Functor m, Bifurcate a) => m a -> (CErr a -> CRes a) -> m (CRes a)
 (?~)  :: (Functor m, Bifurcate a) => m a -> CRes a -> m (CRes a)
+
+-- run an effect on the failure and pass the value through; never throws
+(?<*) :: (Monad m, Bifurcate a) => m a -> (CErr a -> m ()) -> m a
 ```
 
 `?>` does not throw by itself: it produces an `Either a a`, which is
 `Bifurcate`, so a trailing `?` or `??` finishes it:
 `action ?> isGood ?? toErr`.
+
+`?<*` is for logging or counting a failure. A constant error such as
+`? err503` throws the underlying failure away, so tap it first:
+`runQuery q ?<* logDbError ? err503`. It returns the original value, so
+every other operator still works after it.
 
 All operators are `infixl 1`, like `>>=`, `<&>` and `&`, so they chain
 left to right without parentheses.
@@ -257,7 +265,7 @@ neither throws by themselves. See the readme for details.
   isomorphism for the base types, a lossy projection for traversables.
 - `collapse` embeds that `Either` into a `MonadError`, translating the
   failure on the way; `??` and `?` are `collapse` applied with `>>=`.
-- `?>`, `?~` and `??~` and the fallbacks never throw: they produce or
+- `?>`, `?~`, `??~`, `?<*` and the fallbacks never throw: they produce or
   consume `Bifurcate` values.
 - `?+`, `?!` and `?∅` bifurcate on cardinality (none, one, many)
   instead of structure.

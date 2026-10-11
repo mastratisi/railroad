@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               railroad
-version:            0.2.0.1
+version:            0.2.1.0
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Frederik Kallstrup Mastratisi
@@ -40,6 +40,9 @@ description:
 
     * Tag by a predicate with @?>@, or fall back to another source with @?|@
       and @?|<>@.
+
+    * Log a failure before a constant error discards it, with @?\<*@:
+      @runQuery q ?\<* logDbError ? err503@.
 
     * @Validation@ failures accumulate: validate a whole request and report
       every problem at once.

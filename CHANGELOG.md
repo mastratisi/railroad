@@ -1,5 +1,13 @@
 # Revision history for railroad
 
+## 0.2.1.0 -- 2026-10-11
+* Add the tap operator `(?<*)`: runs an effect on the failure and passes the original value through
+  unchanged, so a failure can be logged or counted before a constant error throws it away:
+  `runQuery q ?<* logDbError ? err503`. The handler is a function of the failure (`CErr a -> m ()`)
+  and runs only when there is one. It needs only `Monad`, never throws, and is defined once, in
+  `Railroad.Bifurcate`, so `Railroad` and `Railroad.MonadError` re-export it.
+* Documentation: say "unwrap" instead of "peel" for taking apart one layer of a result.
+
 ## 0.2.0.1 -- 2026-10-11
 * Documentation: a README section on the empty-collection gotcha (`?` on a traversable checks that
   every element succeeds, so an empty one passes; chain `?+` before it), with the quantifiers each

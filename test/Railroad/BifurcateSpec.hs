@@ -48,6 +48,11 @@ spec = do
       (runIdentity (pure x ?~ d) === either (const d) id (bifurcate x))
       .&&. (runIdentity (pure x ??~ f) === either f id (bifurcate x))
 
+  forShapes "?<* runs the handler on a failure only and passes the value through" $ \(_ :: Proxy a) -> property $
+    \(x :: a) ->
+      let (y, logged) = runState (pure x ?<* (\e -> modify (e :))) ([] :: [CErr a])
+      in (bifurcate y === bifurcate x) .&&. (logged === either pure (const []) (bifurcate x))
+
   describe "?| (fallback, last error kept)" $ do
     let law :: forall a b. (Shape a, Shape b, CRes a ~ CRes b) => Proxy a -> Proxy b -> Property
         law _ _ = property $ \(x :: a) (y :: b) ->

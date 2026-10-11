@@ -25,7 +25,7 @@ what to throw if it fails, so the happy path stays one line. A longer
 
 The purpose of `railroad` is to error handle tersely, keeping the
 happy-path clean of control-flow and functor unpacking.  It does this
-with 10 combinators, that abstract over binary co-products (`Bool`,
+with 11 combinators, that abstract over binary co-products (`Bool`,
 `Maybe`, `Either`, `Validation`) and Traversables or Folds over them.
 
 ```haskell
@@ -63,7 +63,7 @@ stack with `Error`.
 - `Railroad`: the operators for the `effectful` `Error` effect.
 - `Railroad.MonadError`: the same operators for any `MonadError` (`mtl`, `ExceptT`, servant's `Handler`).
 - `Railroad.Bifurcate`: the `Bifurcate` class and the operators that never throw
-  (`?>`, `?~`, `??~`, `?|`, `?|<>`); `Railroad.Cardinality`: `CardinalityError`.
+  (`?>`, `?~`, `??~`, `?|`, `?|<>`, `?<*`); `Railroad.Cardinality`: `CardinalityError`.
   Both of the above re-export these, so you rarely import them directly.
 
 ## Install
@@ -105,6 +105,7 @@ register email = do
 
 updateAsset :: Error ServerError :> es => UserId -> Asset -> Eff es ()
 updateAsset uid asset = do
+  -- permitted is an SQL exists, so it always returns exactly one row (see the gotcha below)
   _ <- runQuery (permitted uid asset) ? err500 ? err403   -- db error, then "not permitted"
   ...
 ```
@@ -153,6 +154,7 @@ same operators for plain `MonadError`, including servant's `Handler`.
 | `?∅`     | Derail on non-empty collections (alias `?@`)  | `items ?∅ DuplicateFound`     |
 | `?\|`    | Fall back to another action on error         | `cache k ?\| db k ? NotFound` |
 | `?\|<>`  | Fall back, combining the errors with `<>`     | `a ?\|<> b ?? toErr`         |
+| `?<*`    | Run an effect on a failure, then carry on     | `action ?<* logIt ? MyError`  |
 
 
 All operators are `infixl 1`, like `>>=`, `<&>` and `&`, so they chain
@@ -250,6 +252,19 @@ first, for example with `note`-like functions:
 Neither throws by itself, and the right-hand side only runs if the left
 one failed. Unlike `Validation`, which runs all independent checks and
 collects every failure, a fallback chain succeeds on the first good answer.
+
+### Observing failures
+A constant error such as `? err503` throws the underlying failure away.
+`?<*` runs an effect on the failure first and passes the value through
+unchanged, so the next operator still sees it:
+
+```haskell
+runQuery q ?<* logDbError ? err503
+```
+
+The handler is a function of the failure (`CErr`), returns `m ()`, and
+runs only when there is a failure. Like `<*` it keeps the left value, and
+like the other operators in `Railroad.Bifurcate` it never throws.
 
 ## Gotcha: an empty collection passes
 
