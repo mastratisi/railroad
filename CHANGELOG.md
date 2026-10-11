@@ -1,5 +1,21 @@
 # Revision history for railroad
 
+## 0.2.0.0 -- 2026-10-11
+* Breaking: `(?>)` no longer throws. `m ?> p` tags the value (`Right a` if `p a`, else `Left a`,
+  carrying the rejected value) and is finished with `?` or `??`: `(m ?> p) toErr` becomes
+  `m ?> p ?? toErr`. It needs only `Functor`, so `Railroad.MonadError` re-exports the one definition.
+* Breaking: all operators are now `infixl 1` (they were `infixl 0`, and `?>` was `infixl 1`), like
+  `>>=`, `<&>` and `&`. `runQuery q ? err <&> f`, `f $ m ? e` and `m ? e ?> p` now parse as they read.
+  Code that compiled before keeps its meaning, except where an operator was mixed with another of
+  a different level.
+* New modules `Railroad.Bifurcate` (the class, `CErr`, `CRes`, and the operators that never throw:
+  `?>`, `??~`, `?~`, `?|`, `?|<>`) and `Railroad.Cardinality` (`CardinalityError`, `cardinalityErr`).
+  `Railroad` and `Railroad.MonadError` re-export both, so imports keep working, and all three
+  modules now have explicit export lists. `Railroad.MonadError` no longer imports `Railroad`.
+* Breaking: `(??~)` and `(?~)` are defined once, in `Railroad.Bifurcate`, with the more general type
+  `Functor m => m a -> ...` (they were `Eff es a` in `Railroad`).
+* `(?|)` and `(?|<>)` simplified internally; their behaviour is unchanged.
+
 ## 0.1.2.1 -- 2026-10-11
 * Fix overlapping instances: `Either e (Maybe a)`, `Maybe (Maybe a)`, `Either e Bool` and the like
   did not compile when used with `?`, so nested layers could not be peeled (the README's first

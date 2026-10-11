@@ -58,6 +58,14 @@ stack with `Error`.
 
 ---
 
+## Modules
+
+- `Railroad`: the operators for the `effectful` `Error` effect.
+- `Railroad.MonadError`: the same operators for any `MonadError` (`mtl`, `ExceptT`, servant's `Handler`).
+- `Railroad.Bifurcate`: the `Bifurcate` class and the operators that never throw
+  (`?>`, `?~`, `??~`, `?|`, `?|<>`); `Railroad.Cardinality`: `CardinalityError`.
+  Both of the above re-export these, so you rarely import them directly.
+
 ## Install
 
 ### Nix
@@ -137,7 +145,7 @@ same operators for plain `MonadError`, including servant's `Handler`.
 |----------|-----------------------------------------------|-------------------------------|
 | `??`     | Derail on error with custom error mapping     | `action ?? toMyError`         |
 | `?`      | Derail with constant error                    | `action ? MyError`            |
-| `?>`     | Derail on predicate                           | `(action ?> isGood) toErr`    |
+| `?>`     | Tag by predicate (`Left` carries the value)   | `action ?> isGood ? NotGood`  |
 | `??~`    | Recover with a mapped default (error → value) | `action ??~ toDefaultVal`     |
 | `?~`     | Recover with a const default value            | `action ?~ defaultVal`        |
 | `?+`     | Derail on empty collection                    | `items ?+ NoResults`          |
@@ -146,6 +154,10 @@ same operators for plain `MonadError`, including servant's `Handler`.
 | `?\|`    | Fall back to another action on error         | `cache k ?\| db k ? NotFound` |
 | `?\|<>`  | Fall back, combining the errors with `<>`     | `a ?\|<> b ?? toErr`         |
 
+
+All operators are `infixl 1`, like `>>=`, `<&>` and `&`, so they chain
+left to right with them without parentheses:
+`runQuery q ? err503 <&> toDTO`.
 
 For the semantics of the operators there are 3 relevant questions:
 What counts as an error?  What happens in the error case?  What
@@ -209,7 +221,7 @@ errors, see the
 [validation](https://hackage.haskell.org/package/validation/docs/Data-Validation.html)
 package on Hackage.
 ### What happens in the success case?
-In the success case the result is unwrapped or validated (`?>`, `?+`)
+In the success case the result is unwrapped or validated (`?+`, `?!`)
 and the monad continues its execution. Result Info in the above tables
 shows the resulting type inside the monad.
 

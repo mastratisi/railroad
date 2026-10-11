@@ -158,11 +158,10 @@ I've also added operators like:
 (?) :: (MonadError e m, Bifurcate a) => m a -> e -> m (CRes a)
 action ? err = action ?? const err
 
--- | Collapses any value based on a predicate
-(?>) :: (MonadError e m) => m a -> (a -> Bool) -> (a -> e) -> m a
-(?>) action predicate toErr = do
-  val <- action
-  if predicate val then pure val else throwError_ $ toErr val
+-- | Tags a value by a predicate; the Left carries the rejected value, and
+-- `?` or `??` finish it: `action ?> isGood ?? toErr`
+(?>) :: Functor m => m a -> (a -> Bool) -> m (Either a a)
+action ?> predicate = (\x -> if predicate x then Right x else Left x) <$> action
 
 -- | Collapses a structure, and recovers to a default value in the error case
 (?~) ::  Bifurcate a => m a -> CRes a -> m (CRes a)
