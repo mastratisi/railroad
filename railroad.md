@@ -113,7 +113,7 @@ collapse toErr = either (throwError . toErr) pure . bifurcate
 ```
 
 `toErr` is where each call site says what the failure means. The one
-real operator is then just `collapse` in Kleisli position:
+real operator is then just `collapse` applied with `>>=`:
 
 ```haskell
 (??) :: (MonadError e m, Bifurcate a) => m a -> (CErr a -> e) -> m (CRes a)
@@ -256,7 +256,7 @@ neither throws by themselves. See the readme for details.
 - `Bifurcate` maps a wrapper to `Either (CErr f) (CRes f)`: an
   isomorphism for the base types, a lossy projection for traversables.
 - `collapse` embeds that `Either` into a `MonadError`, translating the
-  failure on the way; `??` and `?` are `collapse` in Kleisli position.
+  failure on the way; `??` and `?` are `collapse` applied with `>>=`.
 - `?>`, `?~` and `??~` and the fallbacks never throw: they produce or
   consume `Bifurcate` values.
 - `?+`, `?!` and `?∅` bifurcate on cardinality (none, one, many)

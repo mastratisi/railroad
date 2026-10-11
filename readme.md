@@ -1,6 +1,6 @@
 # railroad
 
-**A terse Haskell railroad error handling DSL abstracting over error functors by catamorphism via `Either`.**
+**A terse railway-oriented error handling DSL for Haskell. Unwrap `Maybe`, `Either`, `Bool` or `Validation`, or throw a mapped error, with one short operator.**
 
 Instead of
 
