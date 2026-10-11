@@ -1,9 +1,14 @@
 # Revision history for railroad
 
+## 0.1.1.5 -- 2026-10-11
+* Exclude `validation-1.3.0` from the bounds: it does not build (it uses `foldable1-classes-compat`
+  without declaring it). `validation >= 1.3.1` needs `base >= 4.18`, so on GHC 9.4 the solver picked
+  1.3.0 under 0.1.1.4's `validation < 1.4` and the build failed.
+
 ## 0.1.1.4 -- 2026-10-10
 * Widen dependency upper bounds (tests pass):
   - `effectful < 2.8`
-  - `validation < 1.4`, excluding `1.3.0`, which does not build (it uses `foldable1-classes-compat` without declaring it)
+  - `validation < 1.4`
 * Stop using `Data.Validation.toEither`, which `validation-1.3` no longer exports.
 * Declare `hspec-discover` as a `build-tool-depends` of the test suite, so the tests build outside the nix shell.
 
