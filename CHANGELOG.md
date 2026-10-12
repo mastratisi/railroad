@@ -1,5 +1,20 @@
 # Revision history for railroad
 
+## 0.2.2.0 -- unreleased
+* New module `Railroad.Classify`: the pure layer. It holds the `Bifurcate` class, `CErr`, `CRes`,
+  and classifiers that need no monad and never throw. `Railroad.Bifurcate` re-exports all of it and
+  keeps the operators that need a `Functor` or `Monad`, so existing imports keep working.
+* New classifiers, each a plain function into `Either`: `neg` (swap failure and success),
+  `tagBy` (the classifier behind `?>`), `atLeastOne`, `exactlyOne` and `noneAtAll` (in
+  `Railroad.Cardinality`, behind `?+`, `?!` and `?∅`), `partitionBifurcate`, `successes`,
+  `failures` and `anySucceeds`. Any verb applies to a classified value:
+  `xs <&> exactlyOne ??~ f`, `xs <&> anySucceeds ?<* h ? e`.
+* New operator `(?∃)`: succeeds if at least one element succeeds, returning the successes, and
+  otherwise throws an error built from every failure. `xs ?∃ f` is `xs <&> anySucceeds ?? f`.
+* `(?>)`, `(?+)`, `(?!)` and `(?∅)` are now defined over the classifiers. Their types and behaviour
+  are unchanged.
+* `CardinalityError` derives `Eq` and `Show`.
+
 ## 0.2.1.0 -- 2026-10-11
 * Add the tap operator `(?<*)`: runs an effect on the failure and passes the original value through
   unchanged, so a failure can be logged or counted before a constant error throws it away:
