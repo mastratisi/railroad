@@ -1,0 +1,23 @@
+{-# LANGUAGE GHC2021, DataKinds #-}
+module Oracle where
+import qualified Case as C
+import Types
+import H
+
+odb :: World -> Db S
+odb = mkDb
+
+oracle :: Oracle
+oracle = Oracle
+  { oGetUser     = \w i -> show (run (C.getUser (odb w) i))
+  , oRegister    = \w e -> show (run (C.register (odb w) e))
+  , oCheckWrite  = \w u a -> show (run (C.checkWrite (odb w) u a))
+  , oFindUser    = \w i e -> show (run (C.findUser (odb w) i e))
+  , oGrantRead   = \w u a e -> show (run (C.grantRead (odb w) u a e))
+  , oUploadNames = \ns -> show (run (C.uploadNames ns))
+  , oPrefsFor    = \w i -> show (run (C.prefsFor (odb w) i))
+  , oDisplayName = \w i -> show (run (C.displayName (odb w) i))
+  , oUseQuota    = \w i -> show (run (C.useQuota (odb w) i))
+  , oCanonical   = \w e -> show (run (C.canonical (odb w) e))
+  , oShare       = \w u a es -> show (run (C.shareWithMany (odb w) u a es))
+  }

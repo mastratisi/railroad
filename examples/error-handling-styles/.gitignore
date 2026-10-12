@@ -1,0 +1,7 @@
+var/
+report_*.json
+__pycache__/
+base/o/
+base/Old/
+base/Oracle.hs
+base/main

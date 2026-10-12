@@ -1,0 +1,33 @@
+{-# LANGUAGE GHC2021, DataKinds #-}
+module Oracle where
+import Effectful
+import Effectful.Error.Dynamic
+import Effectful.State.Static.Local
+import qualified Old.Types as OT
+import qualified Old.Case as OC
+import Types
+import Data.Maybe (listToMaybe, catMaybes)
+import H
+
+orun :: Eff '[Error OT.Err, State [String]] a -> (Either OT.Err a, [String])
+orun = runPureEff . runState [] . runErrorNoCallStack
+
+@@TOOLD@@
+
+od :: World -> OT.Db '[Error OT.Err, State [String]]
+od = OT.mkDb . toOld
+
+oracle :: Oracle
+oracle = Oracle
+  { oGetUser     = \w i -> show (orun (OC.getUser (od w) i))
+  , oRegister    = \w e -> show (orun (OC.register (od w) e))
+  , oCheckWrite  = \w u a -> show (orun (OC.checkWrite (od w) u a))
+  , oFindUser    = \w i e -> show (orun (OC.findUser (od w) i e))
+  , oGrantRead   = \w u a e -> show (orun (OC.grantRead (od w) u a e))
+  , oUploadNames = \ns -> show (orun (OC.uploadNames ns))
+  , oPrefsFor    = \w i -> show (orun (OC.prefsFor (od w) i))
+  , oDisplayName = \w i -> show (orun (OC.displayName (od w) i))
+  , oUseQuota    = \w i -> show (orun (OC.useQuota (od w) i))
+  , oCanonical   = \w e -> show (orun (OC.canonical (od w) e))
+  , oShare       = \w u a es -> show (orun (OC.shareWithMany (od w) u a es))
+  }

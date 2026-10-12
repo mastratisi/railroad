@@ -1,0 +1,949 @@
+{
+ "S0": {
+  "title": "baseline: no change (harness check)",
+  "kind": "shape",
+  "naive": {
+   "Rail": {
+    "loud_fns": [],
+    "errors": 0
+   },
+   "Case": {
+    "loud_fns": [],
+    "errors": 0
+   },
+   "Helper": {
+    "loud_fns": [],
+    "errors": 0
+   }
+  },
+  "naive_status": {
+   "rail getUser": "ok",
+   "rail register": "ok",
+   "rail checkWrite": "ok",
+   "rail findUser": "ok",
+   "rail grantRead": "ok",
+   "rail uploadNames": "ok",
+   "rail prefsFor": "ok",
+   "rail displayName": "ok",
+   "rail useQuota": "ok",
+   "rail canonical": "ok",
+   "rail shareWithMany": "ok",
+   "case getUser": "ok",
+   "case register": "ok",
+   "case checkWrite": "ok",
+   "case findUser": "ok",
+   "case grantRead": "ok",
+   "case uploadNames": "ok",
+   "case prefsFor": "ok",
+   "case displayName": "ok",
+   "case useQuota": "ok",
+   "case canonical": "ok",
+   "case shareWithMany": "ok",
+   "helper getUser": "ok",
+   "helper register": "ok",
+   "helper checkWrite": "ok",
+   "helper findUser": "ok",
+   "helper grantRead": "ok",
+   "helper uploadNames": "ok",
+   "helper prefsFor": "ok",
+   "helper displayName": "ok",
+   "helper useQuota": "ok",
+   "helper canonical": "ok",
+   "helper shareWithMany": "ok"
+  },
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok"
+  ],
+  "edit": {
+   "Rail": [
+    0,
+    0,
+    0
+   ],
+   "Case": [
+    0,
+    0,
+    0
+   ],
+   "Helper": [
+    0,
+    0,
+    0
+   ]
+  }
+ },
+ "S1": {
+  "title": "cache/prefs lookups: Maybe a  ->  Either CacheError a",
+  "kind": "shape",
+  "naive": {
+   "Rail": {
+    "loud_fns": [],
+    "errors": 0
+   },
+   "Case": {
+    "loud_fns": [
+     "findUser",
+     "prefsFor"
+    ],
+    "errors": 4
+   },
+   "Helper": {
+    "loud_fns": [
+     "findUser",
+     "prefsFor"
+    ],
+    "errors": 3
+   }
+  },
+  "naive_status": {
+   "rail getUser": "ok",
+   "rail register": "ok",
+   "rail checkWrite": "ok",
+   "rail findUser": "ok",
+   "rail grantRead": "ok",
+   "rail uploadNames": "ok",
+   "rail prefsFor": "ok",
+   "rail displayName": "ok",
+   "rail useQuota": "ok",
+   "rail canonical": "ok",
+   "rail shareWithMany": "ok",
+   "case getUser": "ok",
+   "case register": "ok",
+   "case checkWrite": "ok",
+   "case findUser": "ERR",
+   "case grantRead": "ok",
+   "case uploadNames": "ok",
+   "case prefsFor": "ERR",
+   "case displayName": "ok",
+   "case useQuota": "ok",
+   "case canonical": "ok",
+   "case shareWithMany": "ok",
+   "helper getUser": "ok",
+   "helper register": "ok",
+   "helper checkWrite": "ok",
+   "helper findUser": "ERR",
+   "helper grantRead": "ok",
+   "helper uploadNames": "ok",
+   "helper prefsFor": "ERR",
+   "helper displayName": "ok",
+   "helper useQuota": "ok",
+   "helper canonical": "ok",
+   "helper shareWithMany": "ok"
+  },
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok"
+  ],
+  "edit": {
+   "Rail": [
+    0,
+    0,
+    0
+   ],
+   "Case": [
+    2,
+    4,
+    4
+   ],
+   "Helper": [
+    2,
+    3,
+    3
+   ]
+  }
+ },
+ "S2": {
+  "title": "cache/prefs lookups: Maybe a  ->  [Maybe a]  (shards; first hit wins)",
+  "kind": "shape",
+  "naive": {
+   "Rail": {
+    "loud_fns": [
+     "findUser",
+     "prefsFor"
+    ],
+    "errors": 4
+   },
+   "Case": {
+    "loud_fns": [
+     "findUser",
+     "prefsFor"
+    ],
+    "errors": 4
+   },
+   "Helper": {
+    "loud_fns": [
+     "findUser",
+     "prefsFor"
+    ],
+    "errors": 3
+   }
+  },
+  "naive_status": {
+   "rail getUser": "ok",
+   "rail register": "ok",
+   "rail checkWrite": "ok",
+   "rail findUser": "ERR",
+   "rail grantRead": "ok",
+   "rail uploadNames": "ok",
+   "rail prefsFor": "ERR",
+   "rail displayName": "ok",
+   "rail useQuota": "ok",
+   "rail canonical": "ok",
+   "rail shareWithMany": "ok",
+   "case getUser": "ok",
+   "case register": "ok",
+   "case checkWrite": "ok",
+   "case findUser": "ERR",
+   "case grantRead": "ok",
+   "case uploadNames": "ok",
+   "case prefsFor": "ERR",
+   "case displayName": "ok",
+   "case useQuota": "ok",
+   "case canonical": "ok",
+   "case shareWithMany": "ok",
+   "helper getUser": "ok",
+   "helper register": "ok",
+   "helper checkWrite": "ok",
+   "helper findUser": "ERR",
+   "helper grantRead": "ok",
+   "helper uploadNames": "ok",
+   "helper prefsFor": "ERR",
+   "helper displayName": "ok",
+   "helper useQuota": "ok",
+   "helper canonical": "ok",
+   "helper shareWithMany": "ok"
+  },
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok"
+  ],
+  "edit": {
+   "Rail": [
+    3,
+    3,
+    2
+   ],
+   "Case": [
+    3,
+    3,
+    2
+   ],
+   "Helper": [
+    3,
+    3,
+    3
+   ]
+  }
+ },
+ "S3": {
+  "title": "usersById: Either DbError [User]  ->  Either DbError (Maybe User)  (primary key)",
+  "kind": "shape",
+  "naive": {
+   "Rail": {
+    "loud_fns": [
+     "displayName",
+     "findUser"
+    ],
+    "errors": 2
+   },
+   "Case": {
+    "loud_fns": [
+     "displayName",
+     "findUser",
+     "getUser"
+    ],
+    "errors": 5
+   },
+   "Helper": {
+    "loud_fns": [
+     "displayName",
+     "findUser",
+     "getUser"
+    ],
+    "errors": 4
+   }
+  },
+  "naive_status": {
+   "rail getUser": "ok",
+   "rail register": "ok",
+   "rail checkWrite": "ok",
+   "rail findUser": "ERR",
+   "rail grantRead": "ok",
+   "rail uploadNames": "ok",
+   "rail prefsFor": "ok",
+   "rail displayName": "ERR",
+   "rail useQuota": "ok",
+   "rail canonical": "ok",
+   "rail shareWithMany": "ok",
+   "case getUser": "ERR",
+   "case register": "ok",
+   "case checkWrite": "ok",
+   "case findUser": "ERR",
+   "case grantRead": "ok",
+   "case uploadNames": "ok",
+   "case prefsFor": "ok",
+   "case displayName": "ERR",
+   "case useQuota": "ok",
+   "case canonical": "ok",
+   "case shareWithMany": "ok",
+   "helper getUser": "ERR",
+   "helper register": "ok",
+   "helper checkWrite": "ok",
+   "helper findUser": "ERR",
+   "helper grantRead": "ok",
+   "helper uploadNames": "ok",
+   "helper prefsFor": "ok",
+   "helper displayName": "ERR",
+   "helper useQuota": "ok",
+   "helper canonical": "ok",
+   "helper shareWithMany": "ok"
+  },
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok"
+  ],
+  "edit": {
+   "Rail": [
+    1,
+    1,
+    1
+   ],
+   "Case": [
+    3,
+    6,
+    8
+   ],
+   "Helper": [
+    4,
+    9,
+    9
+   ]
+  }
+ },
+ "S4": {
+  "title": "permitted: Either DbError [Bool]  ->  Either DbError Bool  (SELECT EXISTS)",
+  "kind": "shape",
+  "naive": {
+   "Rail": {
+    "loud_fns": [
+     "checkWrite",
+     "grantRead"
+    ],
+    "errors": 3
+   },
+   "Case": {
+    "loud_fns": [
+     "checkWrite",
+     "grantRead"
+    ],
+    "errors": 3
+   },
+   "Helper": {
+    "loud_fns": [
+     "checkWrite",
+     "grantRead"
+    ],
+    "errors": 3
+   }
+  },
+  "naive_status": {
+   "rail getUser": "ok",
+   "rail register": "ok",
+   "rail checkWrite": "ERR",
+   "rail findUser": "ok",
+   "rail grantRead": "ERR",
+   "rail uploadNames": "ok",
+   "rail prefsFor": "ok",
+   "rail displayName": "ok",
+   "rail useQuota": "ok",
+   "rail canonical": "ok",
+   "rail shareWithMany": "ERR",
+   "case getUser": "ok",
+   "case register": "ok",
+   "case checkWrite": "ERR",
+   "case findUser": "ok",
+   "case grantRead": "ERR",
+   "case uploadNames": "ok",
+   "case prefsFor": "ok",
+   "case displayName": "ok",
+   "case useQuota": "ok",
+   "case canonical": "ok",
+   "case shareWithMany": "ERR",
+   "helper getUser": "ok",
+   "helper register": "ok",
+   "helper checkWrite": "ERR",
+   "helper findUser": "ok",
+   "helper grantRead": "ERR",
+   "helper uploadNames": "ok",
+   "helper prefsFor": "ok",
+   "helper displayName": "ok",
+   "helper useQuota": "ok",
+   "helper canonical": "ok",
+   "helper shareWithMany": "ERR"
+  },
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok"
+  ],
+  "edit": {
+   "Rail": [
+    3,
+    3,
+    3
+   ],
+   "Case": [
+    6,
+    3,
+    12
+   ],
+   "Helper": [
+    3,
+    3,
+    3
+   ]
+  }
+ },
+ "S5": {
+  "title": "validateName: Validation [String] a  ->  Either [String] a  (refactor)",
+  "kind": "shape",
+  "naive": {
+   "Rail": {
+    "loud_fns": [],
+    "errors": 0
+   },
+   "Case": {
+    "loud_fns": [
+     "uploadNames"
+    ],
+    "errors": 2
+   },
+   "Helper": {
+    "loud_fns": [
+     "uploadNames"
+    ],
+    "errors": 2
+   }
+  },
+  "naive_status": {
+   "rail getUser": "ok",
+   "rail register": "ok",
+   "rail checkWrite": "ok",
+   "rail findUser": "ok",
+   "rail grantRead": "ok",
+   "rail uploadNames": "DRIFT",
+   "rail prefsFor": "ok",
+   "rail displayName": "ok",
+   "rail useQuota": "ok",
+   "rail canonical": "ok",
+   "rail shareWithMany": "ok",
+   "case getUser": "ok",
+   "case register": "ok",
+   "case checkWrite": "ok",
+   "case findUser": "ok",
+   "case grantRead": "ok",
+   "case uploadNames": "ERR",
+   "case prefsFor": "ok",
+   "case displayName": "ok",
+   "case useQuota": "ok",
+   "case canonical": "ok",
+   "case shareWithMany": "ok",
+   "helper getUser": "ok",
+   "helper register": "ok",
+   "helper checkWrite": "ok",
+   "helper findUser": "ok",
+   "helper grantRead": "ok",
+   "helper uploadNames": "ERR",
+   "helper prefsFor": "ok",
+   "helper displayName": "ok",
+   "helper useQuota": "ok",
+   "helper canonical": "ok",
+   "helper shareWithMany": "ok"
+  },
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok"
+  ],
+  "edit": {
+   "Rail": [
+    1,
+    1,
+    1
+   ],
+   "Case": [
+    1,
+    1,
+    1
+   ],
+   "Helper": [
+    1,
+    1,
+    1
+   ]
+  }
+ },
+ "P1": {
+  "title": "a database timeout becomes 504, other database failures stay 503",
+  "kind": "policy",
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "rail unit:register_timeout_is_504 ok",
+   "rail unit:register_deadlock_is_503 ok",
+   "rail unit:getUser_timeout_is_504 ok",
+   "rail unit:quota_timeout_is_504 ok",
+   "rail unit:permission_timeout_stays_500 ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "case unit:register_timeout_is_504 ok",
+   "case unit:register_deadlock_is_503 ok",
+   "case unit:getUser_timeout_is_504 ok",
+   "case unit:quota_timeout_is_504 ok",
+   "case unit:permission_timeout_stays_500 ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok",
+   "helper unit:register_timeout_is_504 ok",
+   "helper unit:register_deadlock_is_503 ok",
+   "helper unit:getUser_timeout_is_504 ok",
+   "helper unit:quota_timeout_is_504 ok",
+   "helper unit:permission_timeout_stays_500 ok"
+  ],
+  "edit": {
+   "Rail": [
+    4,
+    5,
+    5
+   ],
+   "Case": [
+    8,
+    8,
+    8
+   ],
+   "Helper": [
+    9,
+    11,
+    8
+   ]
+  }
+ },
+ "P2": {
+  "title": "users can hold several grants: any granting row suffices (was: exactly one row)",
+  "kind": "policy",
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "rail unit:any_True_row_grants_write ok",
+   "rail unit:all_False_is_forbidden ok",
+   "rail unit:no_rows_is_forbidden ok",
+   "rail unit:db_error_is_still_500 ok",
+   "rail unit:existing_read_grant_among_several_conflicts ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "case unit:any_True_row_grants_write ok",
+   "case unit:all_False_is_forbidden ok",
+   "case unit:no_rows_is_forbidden ok",
+   "case unit:db_error_is_still_500 ok",
+   "case unit:existing_read_grant_among_several_conflicts ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok",
+   "helper unit:any_True_row_grants_write ok",
+   "helper unit:all_False_is_forbidden ok",
+   "helper unit:no_rows_is_forbidden ok",
+   "helper unit:db_error_is_still_500 ok",
+   "helper unit:existing_read_grant_among_several_conflicts ok"
+  ],
+  "edit": {
+   "Rail": [
+    3,
+    3,
+    3
+   ],
+   "Case": [
+    3,
+    3,
+    9
+   ],
+   "Helper": [
+    4,
+    4,
+    3
+   ]
+  }
+ },
+ "P3": {
+  "title": "audit-log every duplicate registration attempt",
+  "kind": "policy",
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "rail unit:duplicate_is_logged_and_conflicts ok",
+   "rail unit:fresh_email_logs_nothing ok",
+   "rail unit:db_failure_is_not_a_duplicate ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "case unit:duplicate_is_logged_and_conflicts ok",
+   "case unit:fresh_email_logs_nothing ok",
+   "case unit:db_failure_is_not_a_duplicate ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok",
+   "helper unit:duplicate_is_logged_and_conflicts ok",
+   "helper unit:fresh_email_logs_nothing ok",
+   "helper unit:db_failure_is_not_a_duplicate ok"
+  ],
+  "edit": {
+   "Rail": [
+    1,
+    1,
+    1
+   ],
+   "Case": [
+    1,
+    1,
+    1
+   ],
+   "Helper": [
+    1,
+    1,
+    1
+   ]
+  }
+ },
+ "P4": {
+  "title": "add a third, legacy source to the user lookup fallback chain",
+  "kind": "policy",
+  "fixed_out": [
+   "rail getUser ok",
+   "rail register ok",
+   "rail checkWrite ok",
+   "rail findUser ok",
+   "rail grantRead ok",
+   "rail uploadNames ok",
+   "rail prefsFor ok",
+   "rail displayName ok",
+   "rail useQuota ok",
+   "rail canonical ok",
+   "rail shareWithMany ok",
+   "rail unit:legacy_source_answers ok",
+   "rail unit:nothing_anywhere_is_404 ok",
+   "rail unit:legacy_failure_is_503 ok",
+   "rail unit:legacy_ambiguity_is_500 ok",
+   "rail unit:email_source_wins_over_legacy ok",
+   "case getUser ok",
+   "case register ok",
+   "case checkWrite ok",
+   "case findUser ok",
+   "case grantRead ok",
+   "case uploadNames ok",
+   "case prefsFor ok",
+   "case displayName ok",
+   "case useQuota ok",
+   "case canonical ok",
+   "case shareWithMany ok",
+   "case unit:legacy_source_answers ok",
+   "case unit:nothing_anywhere_is_404 ok",
+   "case unit:legacy_failure_is_503 ok",
+   "case unit:legacy_ambiguity_is_500 ok",
+   "case unit:email_source_wins_over_legacy ok",
+   "helper getUser ok",
+   "helper register ok",
+   "helper checkWrite ok",
+   "helper findUser ok",
+   "helper grantRead ok",
+   "helper uploadNames ok",
+   "helper prefsFor ok",
+   "helper displayName ok",
+   "helper useQuota ok",
+   "helper canonical ok",
+   "helper shareWithMany ok",
+   "helper unit:legacy_source_answers ok",
+   "helper unit:nothing_anywhere_is_404 ok",
+   "helper unit:legacy_failure_is_503 ok",
+   "helper unit:legacy_ambiguity_is_500 ok",
+   "helper unit:email_source_wins_over_legacy ok"
+  ],
+  "edit": {
+   "Rail": [
+    1,
+    1,
+    0
+   ],
+   "Case": [
+    2,
+    9,
+    2
+   ],
+   "Helper": [
+    1,
+    5,
+    1
+   ]
+  }
+ }
+}
