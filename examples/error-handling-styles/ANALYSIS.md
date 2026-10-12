@@ -137,7 +137,7 @@ firstSuccess xs = case partitionBifurcate xs of
 
 It returns the failures when nothing succeeded, so it composes with `?` and
 `?|` directly, and the S2 edit becomes `<&> firstSuccess`. It is lazy in the
-same way `anySucceeds` is. It belongs in `Railroad.Classify` next to
+same way `anySucceeds` is. It belongs in `Railroad.Bifurcate` next to
 `anySucceeds`.
 
 ### Document the element-type rule, and add a regression test (evidence: S5)

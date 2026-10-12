@@ -6,7 +6,6 @@
 
 module Railroad.MonadError
   ( module Railroad.Bifurcate
-  , module Railroad.Cardinality
   , collapse
   , (??), (?), (?+), (?!), (?∅), (?@), (?∃)
   ) where
@@ -14,7 +13,6 @@ module Railroad.MonadError
 import           Control.Monad.Except (MonadError (..))
 import           Data.Functor         ((<&>))
 import           Railroad.Bifurcate
-import           Railroad.Cardinality
 
 -- | Unwraps the success case, or throws the failure mapped by the function.
 collapse :: (MonadError e m, Bifurcate f)

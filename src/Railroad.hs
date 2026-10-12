@@ -7,7 +7,6 @@
 -- @Error@ effect, keeping the happy path clean. For @MonadError@ use "Railroad.MonadError".
 module Railroad
   ( module Railroad.Bifurcate
-  , module Railroad.Cardinality
   , collapse
   , (??), (?), (?+), (?!), (?∅), (?@), (?∃)
   ) where
@@ -16,7 +15,6 @@ import           Data.Functor            ((<&>))
 import           Effectful               (Eff, type (:>))
 import           Effectful.Error.Dynamic (Error, throwError_)
 import           Railroad.Bifurcate
-import           Railroad.Cardinality
 
 
 -- | Unwraps the success case, or throws the failure mapped by the function.
