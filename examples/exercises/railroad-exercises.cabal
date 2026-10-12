@@ -1,0 +1,38 @@
+cabal-version:      3.0
+name:               railroad-exercises
+version:            0.1.0.0
+synopsis:           Exercises that teach the railroad combinators
+build-type:         Simple
+
+common shared
+    default-language: GHC2021
+    default-extensions: LambdaCase
+    ghc-options:      -Wall -Wno-orphans
+    build-depends:
+      base >=4.17 && < 4.23,
+      mtl >= 2.2 && < 2.4,
+      validation (>= 1.1 && < 1.3) || (>= 1.3.1 && < 1.4),
+      QuickCheck >= 2.14 && < 2.16,
+      hspec >= 2.11 && < 2.12,
+      railroad
+
+-- Your suite: fill in src/Exercises.hs, then run `cabal test exercises`.
+test-suite exercises
+    import:           shared
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   src, test
+    main-is:          Spec.hs
+    other-modules:    Domain
+                      Exercises
+
+-- The answer key. `cabal test check-solutions` must pass: it proves every exercise is solvable
+-- and that every reference (the case version) behaves like its railroad solution.
+test-suite check-solutions
+    import:           shared
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   src, solutions, test
+    main-is:          Spec.hs
+    cpp-options:      -DSOLUTIONS
+    other-modules:    Domain
+                      Exercises
+                      Solutions
