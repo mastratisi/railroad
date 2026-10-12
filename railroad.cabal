@@ -74,6 +74,7 @@ library
     exposed-modules:  Railroad
                       Railroad.Bifurcate
                       Railroad.Cardinality
+                      Railroad.Classify
                       Railroad.MonadError
     hs-source-dirs:   src
     default-language: GHC2021
@@ -88,6 +89,7 @@ test-suite railroad-test
     other-modules:    Model
                       RailroadSpec
                       Railroad.BifurcateSpec
+                      Railroad.CardinalitySpec
                       Railroad.MonadErrorSpec
     build-tool-depends:
                   hspec-discover:hspec-discover >= 2.11.14 && < 2.12

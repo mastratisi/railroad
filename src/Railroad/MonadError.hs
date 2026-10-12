@@ -8,11 +8,11 @@ module Railroad.MonadError
   ( module Railroad.Bifurcate
   , module Railroad.Cardinality
   , collapse
-  , (??), (?), (?+), (?!), (?∅), (?@)
+  , (??), (?), (?+), (?!), (?∅), (?@), (?∃)
   ) where
 
 import           Control.Monad.Except (MonadError (..))
-import           Data.Foldable        (toList)
+import           Data.Functor         ((<&>))
 import           Railroad.Bifurcate
 import           Railroad.Cardinality
 
@@ -34,33 +34,35 @@ action ? err = action ?? const err
 
 -- | Succeeds if non-empty, returning the collection; else throws the constant error.
 -- Chain it before @?@ on a traversable, which an empty collection passes.
+-- Sugar for @xs <&> 'atLeastOne' ? err@.
 (?+) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> e -> m (t a)
-(?+) action err = do
-  xs <- action
-  if null xs then throwError err else pure xs
+action ?+ err = action <&> atLeastOne ? err
 
 -- | Succeeds if there is exactly one element, returning it; else throws the error built
--- from the 'CardinalityError'.
+-- from the 'CardinalityError'. Sugar for @xs <&> 'exactlyOne' ?? toErr@.
 (?!) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> (CardinalityError (t a) -> e) -> m a
-(?!) action toErr = do
-  xs <- action
-  case toList xs of
-    []  -> throwError $ toErr IsEmpty
-    [x] -> pure x
-    _   -> throwError $ toErr $ TooMany xs
+action ?! toErr = action <&> exactlyOne ?? toErr
 
 -- | Succeeds if empty, returning @()@; else throws the error built from the collection.
+-- Sugar for @xs <&> 'noneAtAll' ?? toErr@.
 (?∅) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> (t a -> e) -> m ()
-(?∅) action toErr = do
-  xs <- action
-  if null xs then pure () else throwError (toErr xs)
+action ?∅ toErr = action <&> noneAtAll ?? toErr
 
 -- | ASCII alias for '?∅'.
 (?@) :: forall m e t a. (MonadError e m, Foldable t)
      => m (t a) -> (t a -> e) -> m ()
 (?@) = (?∅)
 
-infixl 1 ??, ?, ?!, ?+, ?∅, ?@
+-- | Succeeds if at least one element succeeds, returning the successes; else throws the
+-- error built from every failure (none if the collection was empty). Unlike '?+' it asks
+-- whether an element succeeded, not whether there is one. On a nested base type such as
+-- @Maybe (Maybe a)@ the outer layer is the collection and the inner one is checked.
+-- Sugar for @xs <&> 'anySucceeds' ?? toErr@.
+(?∃) :: forall m e t a. (MonadError e m, Foldable t, Bifurcate a)
+     => m (t a) -> ([CErr a] -> e) -> m [CRes a]
+action ?∃ toErr = action <&> anySucceeds ?? toErr
+
+infixl 1 ??, ?, ?!, ?+, ?∅, ?@, ?∃

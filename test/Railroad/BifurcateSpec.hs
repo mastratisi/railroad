@@ -4,13 +4,14 @@ module Railroad.BifurcateSpec where
 
 import           Control.Monad.State    (modify, runState)
 import           Data.Bifunctor         (first)
-import           Data.Either            (isLeft)
+import           Data.Either            (isLeft, isRight)
 import           Data.Functor.Identity
 import           Data.Maybe             (listToMaybe)
 import           Data.Proxy             (Proxy (..))
 import           Data.Validation        (Validation (..))
 import           Model
 import           Railroad.Bifurcate
+import           Railroad.Cardinality   (atLeastOne, noneAtAll)
 import           Test.Hspec
 import           Test.QuickCheck        hiding (Result (..))
 
@@ -81,3 +82,63 @@ spec = do
     it "[Either], [Either]" $ law (Proxy @[Either [Int] Int]) (Proxy @[Either [Int] Int])
     it "is associative" $ property $ \(a :: Either [Int] Int) (b :: Either [Int] Int) (c :: Either [Int] Int) ->
       runIdentity ((pure a ?|<> pure b) ?|<> pure c) === runIdentity (pure a ?|<> (pure b ?|<> pure c))
+
+  describe "tagBy" $ do
+    it "keeps the value on both sides" $ property $ \(p :: Fun Int Bool) (x :: Int) ->
+      either id id (tagBy (applyFun p) x) === x
+    it "is Right exactly when the predicate holds" $ property $ \(p :: Fun Int Bool) (x :: Int) ->
+      isRight (tagBy (applyFun p) x) === applyFun p x
+
+  describe "partitionBifurcate, successes, failures" $ do
+    let laws :: forall a. (Shape a, Bifurcate [a], CErr [a] ~ CErr a, CRes [a] ~ [CRes a])
+             => Proxy a -> Property
+        laws _ = property $ \(xs :: [a]) (ys :: [a]) ->
+          let (es, rs) = partitionBifurcate xs
+          in (length es + length rs === length xs)
+             .&&. (partitionBifurcate (xs ++ ys) === (es <> failures ys, rs <> successes ys))
+             .&&. (isRight (bifurcate xs) === null es)
+             .&&. (either (const True) (== rs) (bifurcate xs))
+             .&&. (successes xs === rs)
+             .&&. (failures xs === es)
+        single :: forall a. Shape a => Proxy a -> Property
+        single _ = property $ \(x :: a) ->
+          (successes [x] === either (const []) pure (bifurcate x))
+          .&&. (failures [x] === either pure (const []) (bifurcate x))
+    it "Bool"       $ laws (Proxy @Bool)
+    it "Maybe"      $ laws (Proxy @(Maybe Int))
+    it "Either"     $ laws (Proxy @(Either Int Int))
+    it "Validation" $ laws (Proxy @(Validation [Int] Int))
+    forShapes "a singleton splits as its element does" single
+
+  describe "anySucceeds" $ do
+    let law :: forall a. (Shape a) => Proxy a -> Property
+        law _ = property $ \(xs :: [a]) ->
+          let r = anySucceeds xs
+          in (isRight r === any (isRight . bifurcate) xs)
+             .&&. (r === (if any (isRight . bifurcate) xs then Right (successes xs) else Left (failures xs)))
+             .&&. (either length (const 0) r === (if any (isRight . bifurcate) xs then 0 else length xs))
+    it "Bool"       $ law (Proxy @Bool)
+    it "Maybe"      $ law (Proxy @(Maybe Int))
+    it "Either"     $ law (Proxy @(Either Int Int))
+    it "Validation" $ law (Proxy @(Validation [Int] Int))
+    it "fails on an empty collection with no failures" $
+      anySucceeds ([] :: [Maybe Int]) `shouldBe` Left []
+
+  describe "neg" $ do
+    it "Bool and Maybe swap to the unit failure" $ do
+      neg True `shouldBe` Left ()
+      neg False `shouldBe` Right ()
+      neg (Just 'x') `shouldBe` Left 'x'
+      neg (Nothing :: Maybe Char) `shouldBe` Right ()
+    forShapes "swaps failure and success" $ \(_ :: Proxy a) -> property $
+      \(x :: a) -> neg x === either Right Left (bifurcate x)
+    forShapes "is an involution: neg (neg x) = bifurcate x" $ \(_ :: Proxy a) -> property $
+      \(x :: a) -> neg (neg x) === bifurcate x
+    it "of a traversable passes exactly when some element failed" $ property $
+      \(xs :: [Either Int Int]) -> isRight (neg xs) === any (isLeft . bifurcate) xs
+    it "carries the first failure of a traversable" $ property $ \(xs :: [Either Int Int]) ->
+      neg xs === (case [e | Left e <- xs] of { e : _ -> Right e; [] -> Left [a | Right a <- xs] })
+    it "of atLeastOne is noneAtAll" $ property $ \(xs :: [Int]) ->
+      neg (atLeastOne xs) === noneAtAll xs
+    it "turns anySucceeds into all-failed" $ property $ \(xs :: [Either Int Int]) ->
+      isRight (neg (anySucceeds xs)) === all (isLeft . bifurcate) xs

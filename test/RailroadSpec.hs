@@ -3,6 +3,7 @@
 module RailroadSpec where
 
 import           Data.Bifunctor          (first)
+import           Data.Either             (isRight)
 import           Data.Functor            ((<&>))
 import           Data.Proxy              (Proxy (..))
 import           Effectful
@@ -61,3 +62,18 @@ spec = do
       run (pure (Right 4 :: Either Int Int) ?<* (\e -> modify (e :)) ? "failed") `shouldBe` (Right 4, [])
     it "gives the rejected value of ?> to the error mapper" $ do
       runRail (pure (4 :: Int) ?> (> 5) ?? \n -> "rejected " ++ show n) `shouldBe` Left "rejected 4"
+
+  describe "?∃ (at least one success)" $ do
+    it "returns the successes, or throws every failure" $ property $ \(xs :: [Either Int Int]) ->
+      runRail (pure xs ?∃ show)
+        === (if any isRight xs then Right [a | Right a <- xs] else Left (show [e | Left e <- xs]))
+    it "throws on an empty collection, with no failures" $
+      runRail (pure ([] :: [Maybe Int]) ?∃ show) `shouldBe` Left "[]"
+    it "passes the successes of a Maybe collection and throws unit failures" $ do
+      runRail (pure [Just 1, Nothing, Just (3 :: Int)] ?∃ show) `shouldBe` Right [1, 3]
+      runRail (pure [Nothing, Nothing :: Maybe Int] ?∃ show) `shouldBe` Left "[(),()]"
+    it "throws where ?+ passes: every element failed" $ do
+      runRail (pure [Left 1, Left 2 :: Either Int Int] ?+ "none") `shouldSatisfy` isRight
+      runRail (pure [Left 1, Left 2 :: Either Int Int] ?∃ show) `shouldBe` Left "[1,2]"
+    it "chains left to right with the other operators" $ do
+      runRail (pure (Right [Just 1, Nothing] :: Either String [Maybe Int]) ? "db" ?∃ show) `shouldBe` Right [1]
