@@ -1,5 +1,9 @@
 # Revision history for railroad
 
+## 0.2.1.1 -- 2026-10-12
+* Widen dependency upper bounds (tests pass):
+  - `QuickCheck < 2.20`
+
 ## 0.2.1.0 -- 2026-10-11
 * Add the tap operator `(?<*)`: runs an effect on the failure and passes the original value through
   unchanged, so a failure can be logged or counted before a constant error throws it away:
