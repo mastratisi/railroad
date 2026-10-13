@@ -1,6 +1,8 @@
 # Revision history for railroad
 
-## 0.2.2.0 -- unreleased
+## 0.3.0.0 -- unreleased
+* The test suite and CI now run on GHC 9.10, 9.12 and 9.14 (`tested-with`). The dependency bounds are
+  unchanged, so older GHCs are still allowed but are no longer tested.
 * Breaking: `Railroad.Cardinality` is merged into `Railroad.Bifurcate`. `CardinalityError` and
   `cardinalityErr` are exported from `Railroad.Bifurcate`, and still from `Railroad` and
   `Railroad.MonadError`.

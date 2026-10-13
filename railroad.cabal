@@ -1,22 +1,22 @@
 cabal-version:      3.0
 name:               railroad
-version:            0.2.2.0
+version:            0.3.0.0
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Frederik Kallstrup Mastratisi
 maintainer:         mastratisi@proton.me
 category:           Control, Error Handling
 build-type:         Simple
-tested-with:        GHC == 9.4.8, GHC == 9.6.7, GHC == 9.8.4, GHC == 9.10.3, GHC == 9.12.4, GHC == 9.14.1
+tested-with:        GHC == 9.10.3, GHC == 9.12.4, GHC == 9.14.1
 extra-doc-files:    CHANGELOG.md, readme.md
-synopsis:           Railway-oriented error handling: unwrap or throw in one short operator.
+synopsis:           Railway-oriented error handling: unwrap, throw, recover or fall back
 description:
     Railway-oriented error handling for Haskell: one short operator per
     step, and the failure paths stop taking up lines.
 
-    Each operator unwraps one layer of a result (@Maybe@, @Either@, @Bool@,
-    @Validation@, or a collection of them) and says what to throw if it
-    failed. Where you would write
+    Each operator looks at a result (@Maybe@, @Either@, @Bool@,
+    @Validation@, or a collection of them), decides whether it is a failure,
+    and says what to do about it. Where you would write
 
     > rows <- runQuery (userById uid) >>= either (const (throwError err503)) pure
     > user <- case rows of
@@ -31,30 +31,35 @@ description:
     Layers are unwrapped left to right: @? err503@ unwraps the database
     @Either@, then @?!@ demands exactly one row (none is a 404, several a 500).
 
-    * Works in any @MonadError@ ("Railroad.MonadError": @mtl@, @ExceptT@,
-      servant's @Handler@) and in @effectful@ with the @Error@ effect
-      ("Railroad").
+    What to do about a failure:
 
-    * Unwrap or throw: @?@ (constant error) and @??@ (error computed from
-      the failure). Recover instead of throwing: @?~@ and @??~@.
+    * Throw: @?@ (constant error) and @??@ (error computed from the failure).
 
-    * Tag by a predicate with @?>@, or fall back to another source with @?|@
-      and @?|<>@.
+    * Recover: @?~@ and @??~@.
 
-    * Log a failure before a constant error discards it, with @?\<*@:
-      @runQuery q ?\<* logDbError ? err503@.
+    * Observe, then carry on: @?\<*@, as in @runQuery q ?\<* logDbError ? err503@.
 
-    * @Validation@ failures accumulate: validate a whole request and report
-      every problem at once.
+    * Fall back to another source: @?|@, or @?|<>@ to combine the errors.
 
-    * All operators are @infixl 1@ like @>>=@ and @\<&\>@, so they chain without
-      parentheses.
+    What counts as a failure:
 
-    Collections are checked with quantifiers: @?@ is ∀ ("every element
-    succeeds", so an empty collection passes), @?+@ is ∃ ("at least one"),
-    @?!@ is ∃! ("exactly one") and @?∅@ is ¬∃ ("none"). They chain:
-    @xs ?+ e1 ? e2@ means "at least one, and all succeed". The readme has the
-    details and a longer servant example.
+    * @Nothing@, @Left@, @False@ and @Failure@. A collection fails if any
+      element does, so an empty collection passes. @Validation@ failures
+      accumulate, so a whole request can report every problem at once.
+
+    * Collections are also checked by size: @?+@ (at least one), @?!@ (exactly
+      one), @?∅@ (none), and @?∃@ (at least one element succeeded; keeps the
+      successes).
+
+    * Classifiers: @?>@ tags by a predicate. Any function into @Either@,
+      @Maybe@, @Bool@ or @Validation@ is a classifier, applied with @\<&\>@.
+      "Railroad.Bifurcate" provides @neg@, @atLeastOne@, @exactlyOne@,
+      @noneAtAll@ and @anySucceeds@.
+
+    Works in any @MonadError@ ("Railroad.MonadError": @mtl@, @ExceptT@,
+    servant's @Handler@) and in @effectful@ with the @Error@ effect
+    ("Railroad"). All operators are @infixl 1@ like @>>=@ and @\<&\>@, so
+    they chain without parentheses. The readme has more examples.
 homepage:     https://github.com/mastratisi/railroad
 bug-reports:  https://github.com/mastratisi/railroad/issues
 source-repository head
