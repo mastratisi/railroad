@@ -259,6 +259,30 @@ cache k ?| db k ?| legacy k ? NotFound
 needs the sources to share an error type. Both are associative, and
 neither throws by themselves. See the readme for details.
 
+## The algebra
+
+Read an `Either e a` as a decision with evidence on both sides, and the operators fall
+into logical connectives:
+
+| Symbol | Realisation |
+|---|---|
+| ⊤ / ⊥ with evidence | `bifurcate` to `Either (CErr f) (CRes f)` |
+| ∧, first counterexample | `Either`'s monad, chained `?` |
+| ∧, all counterexamples | `Validation` |
+| ∨, last counterexample | `?\|` (binary only) |
+| ∨, combined counterexamples | `?\|<>` (binary only) |
+| ¬ | `neg` |
+| ∀ | `?` on a collection |
+| ∃ over elements | `?+`, `atLeastOne` |
+| ∃ over successes | `?∃`, `anySucceeds` |
+| ∃! over elements | `?!`, `exactlyOne` |
+| ∃! over successes | `successes`, then `exactlyOne` |
+| ¬∃ over elements | `?∅`, `noneAtAll` |
+| ¬∃ over successes | `neg . anySucceeds` |
+
+The connectives do not commute: `a ? e1 ? e2` and `a ? e2 ? e1` fail with different
+errors, and a fallback chain tries its sources in order.
+
 ## Recap
 
 - `Bifurcate` maps a wrapper to `Either (CErr f) (CRes f)`: an

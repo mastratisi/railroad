@@ -41,8 +41,36 @@ example = runExcept $ do
   pure (x + y + z + q)                                          -- Right 8
 ```
 
+## How it works
+
+Every operator does two things: it decides whether a value is a failure, then it says what
+to do about a failure. Operators read left to right, and each one unwraps one layer:
+
+```
+runQuery (userById uid)           Eff es (Either DbError [User])
+  ? err503                        Left _  → throw err503          Right rows → rows :: [User]
+  ?! cardinalityErr err404 (const err500)
+                                  [] → throw err404, several → throw err500
+                                  [u] → u :: User
+```
+
+What counts as a failure depends on the type: `Nothing`, `Left`, `False` or `Failure`. A
+list fails if any element does. There are four things to do about a failure:
+
+| Do | Operators | Example |
+|---|---|---|
+| throw an error | `?` `??` | `action ? err503` |
+| recover with a default | `?~` `??~` | `action ?~ 0` |
+| run an effect, then carry on | `?<*` | `action ?<* logIt ? err503` |
+| try another source | `?\|` `?\|<>` | `cache k ?\| db k ? NotFound` |
+
+The operators for collections (`?+`, `?!`, `?∅`, `?∃`) decide by how many elements there
+are or succeeded; the next sections go through them. The operators also read as logical
+connectives and quantifiers (∧, ∨, ¬, ∀, ∃); that reading is in [`railroad.md`](railroad.md).
+
 ## Contents
 
+- [How it works](#how-it-works)
 - [Install](#install)
 - [Example: a servant backend](#example-a-servant-backend)
 - [The operators](#the-operators)
@@ -119,8 +147,6 @@ updateAsset' uid asset = do
 
 ## The operators
 
-Twelve operators.
-
 | Role | Operator | What it does | Example |
 |---|---|---|---|
 | Throw | `?` | Unwrap, or throw a constant | `action ? MyError` |
@@ -131,7 +157,7 @@ Twelve operators.
 | | `?∃` | Throw unless at least one element succeeded; keep the successes | `sources ?∃ toErr` |
 | Recover | `?~` | Recover with a constant | `action ?~ defaultVal` |
 | | `??~` | Recover with a value computed from the failure | `action ??~ toDefault` |
-| Classify | `?>` | Turn a predicate into a failure | `action ?> isGood ? NotGood` |
+| Classify | `?>` | Tag by a predicate: a rejected value becomes the failure | `action ?> isGood ? NotGood` |
 | Observe | `?<*` | Run an effect on a failure, then carry on | `action ?<* logIt ? MyError` |
 | Fall back | `?\|` | Try the next source on failure; keep the last error | `cache k ?\| db k ? NotFound` |
 | | `?\|<>` | The same, combining all the errors with `<>` | `a ?\|<> b ?? toErr` |
@@ -144,16 +170,54 @@ operator.
 
 ### Classifiers
 
-The operators that throw are built on pure functions that never do. They are in
-`Railroad.Bifurcate`, usable without any monad:
+A classifier is any function whose result type the operators already understand:
+`Either e r`, `Maybe r`, `Bool`, `Validation e r`, or a traversable of those. It
+sorts a value into failure or success and says nothing about what to do with a
+failure. In `Either e r` the failure carries the reason (`e`) and the success carries
+the value you continue with (`r`). A `Maybe` loses the reason
+and a `Bool` loses the value.
+
+Existing functions are classifiers: `lookup k`, `readMaybe`, or a parser such as
+`parseAge :: String -> Either String Int`. Apply one with `<&>` and finish with an
+operator, which decides what happens on failure:
+
+```haskell
+readBody <&> parseAge ?? BadRequest            -- throw, built from the parse error
+readBody <&> parseAge ??~ const 18             -- recover with a default
+readBody <&> parseAge ?<* logIt ? BadAge       -- log the parse error, then throw
+```
+
+The classifiers in the library are pure functions in `Railroad.Bifurcate` and need no
+monad:
 
 ```haskell
 neg         :: Bifurcate a => a -> Either (CRes a) (CErr a)   -- swap success and failure
 tagBy       :: (a -> Bool) -> a -> Either a a                 -- Right when the predicate holds
+atLeastOne  :: Foldable t => t a -> Maybe (t a)
+exactlyOne  :: Foldable t => t a -> Either (CardinalityError (t a)) a
+noneAtAll   :: Foldable t => t a -> Either (t a) ()
 successes   :: (Foldable t, Bifurcate a) => t a -> [CRes a]
 failures    :: (Foldable t, Bifurcate a) => t a -> [CErr a]
 anySucceeds :: (Foldable t, Bifurcate a) => t a -> Either [CErr a] [CRes a]
 ```
+
+Any classifier combines with any of four verbs. Only the throw column has dedicated
+operators (`m` is the action, `n` another source, `e` a constant error, `f` a mapper,
+`d` a default, `h` an effect):
+
+| Classifier | throw | recover | observe | fall back |
+|---|---|---|---|---|
+| structural (∀ on a collection) | `m ? e` `m ?? f` | `m ?~ d` `m ??~ f` | `m ?<* h` | `m ?\| n` |
+| `tagBy` | `m ?> p ? e` | `m ?> p ?~ d` | `m ?> p ?<* h` | `m ?> p ?\| n` |
+| `atLeastOne` | `m ?+ e` | `m <&> atLeastOne ?~ d` | `m <&> atLeastOne ?<* h` | `m <&> atLeastOne ?\| n` |
+| `exactlyOne` | `m ?! f` | `m <&> exactlyOne ??~ f` | `m <&> exactlyOne ?<* h` | `m <&> exactlyOne ?\| n` |
+| `noneAtAll` | `m ?∅ f` | `m <&> noneAtAll ??~ f` | `m <&> noneAtAll ?<* h` | `m <&> noneAtAll ?\| n` |
+| `anySucceeds` | `m ?∃ f` | `m <&> anySucceeds ??~ f` | `m <&> anySucceeds ?<* h` | `m <&> anySucceeds ?\| n` |
+| `neg` | `m <&> neg ? e` | `m <&> neg ??~ f` | `m <&> neg ?<* h` | `m <&> neg ?\| n` |
+
+A fall-back chain is finished with `?` or `??` to turn a total failure into a throw. A
+failure with several cases is `m ?? \case ...`. Nothing covers a success that also
+carries errors (`These`).
 
 `neg` expresses "must not exist" on a single value: `findByEmail e <&> neg ? err409`
 throws `err409` when a user is found and passes on `Nothing`. `?∃` is "at least one
@@ -239,15 +303,15 @@ an empty collection that holds vacuously, like `and []`:
 pure ([] :: [Bool]) ? err403    -- succeeds, with []
 ```
 
-That surprises a permission check where "no rows" should mean "not permitted".
-Require at least one element first, with `?+`:
+In a permission check, "no rows" should mean "not permitted", so require at least
+one element first, with `?+`:
 
 ```haskell
 _ <- runQuery (permitted uid asset) ? err500 ?+ err403 ? err403
 --                                  ^ db error ^ >= 1 row ^ all True
 ```
 
-The collection operators are the other quantifiers, and they chain:
+Each quantifier has an operator, and they chain:
 
 | Operator | Succeeds when | Logic |
 |---|---|---|
@@ -269,10 +333,15 @@ helpers) and applies nine changes to each. Cells are edit sites / lines touched.
 | Change | railroad | helpers | `case` |
 |---|---|---|---|
 | `Maybe a` to `Either CacheError a` | 0 / 0 | 2 / 6 | 2 / 8 |
+| `Maybe a` to `[Maybe a]` (shards, first hit wins) | 3 / 5 | 3 / 6 | 3 / 5 |
 | `Either DbError [User]` to `Either DbError (Maybe User)` | 1 / 2 | 4 / 18 | 3 / 14 |
-| add a third fallback source | 1 / 1 | 1 / 6 | 2 / 11 |
+| `Either DbError [Bool]` to `Either DbError Bool` (`SELECT EXISTS`) | 3 / 6 | 3 / 6 | 6 / 15 |
+| `validateName`: `Validation` to `Either` | 1 / 2 | 1 / 2 | 1 / 2 |
 | database timeout becomes 504 | 4 / 10 | 9 / 19 | 8 / 16 |
-| all nine changes | 17 / 34 | 28 / 72 | 29 / 85 |
+| several grants per user: any granting row suffices | 3 / 6 | 4 / 7 | 3 / 12 |
+| audit-log every duplicate registration | 1 / 2 | 1 / 2 | 1 / 2 |
+| add a third fallback source | 1 / 1 | 1 / 6 | 2 / 11 |
+| **all nine** | **17 / 34** | **28 / 72** | **29 / 85** |
 
 Adding a source to a fallback chain is one line:
 
@@ -295,8 +364,8 @@ type. The other two styles stopped compiling. After changing a return type, chec
 the operators at its call sites: a list where there was one value changes what `?`
 means, and an empty list passes (see the gotcha above).
 
-One LLM wrote the handlers. Eleven handlers and nine changes is a small sample,
-and only GHC 9.10.3 was used.
+One LLM wrote the handlers. The test code base has eleven handlers
+with nine changes done to it and only GHC 9.10.3 was used.
 
 ## Exercises
 
@@ -317,9 +386,8 @@ cd examples/exercises && cabal test exercises
   (`neg`, `tagBy`, `successes`, `failures`, `anySucceeds`, `atLeastOne`, `exactlyOne`,
   `noneAtAll`), `CardinalityError`, and the operators `?>`, `?~`, `??~`, `?|`, `?|<>`, `?<*`.
 
-The first two re-export it, so you rarely import it directly. For the
-reasoning behind the design, read [`railroad.md`](railroad.md), or the code: the
-core is a short file.
+The first two re-export it, so you rarely import it directly. The reasoning behind
+the design is in [`railroad.md`](railroad.md).
 
 ## Contact
 
