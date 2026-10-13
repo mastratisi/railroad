@@ -15,6 +15,11 @@
 * `(?>)`, `(?+)`, `(?!)` and `(?∅)` are now defined over the classifiers. Their types and behaviour
   are unchanged.
 * `CardinalityError` derives `Eq` and `Show`.
+* Widen the test suite's `QuickCheck` upper bound to `< 2.20` (from 0.2.1.1; tests pass).
+
+## 0.2.1.1 -- 2026-10-12
+* Widen dependency upper bounds (tests pass):
+  - `QuickCheck < 2.20`
 
 ## 0.2.1.0 -- 2026-10-11
 * Add the tap operator `(?<*)`: runs an effect on the failure and passes the original value through
